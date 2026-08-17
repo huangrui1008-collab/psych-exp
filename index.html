@@ -275,6 +275,7 @@
    部署前请修改以下参数：
    1. API_KEY            —— DeepSeek 平台申请的 API Key
    2. NEXT_URL            —— 提交完成后跳转的后测问卷地址
+   3. SUPABASE_URL/KEY    —— Supabase 项目地址与匿名 Key（用于保存被试数据）
    其余参数（系统提示词、任务说明文案等）可根据实验设计按需调整。
    ========================================================================= */
 const CONFIG = {
@@ -285,6 +286,11 @@ const CONFIG = {
 
   // 后测问卷跳转地址（会自动附加 ?pid=xxx&group=xxx）
   NEXT_URL: "YOUR_NEXT_URL_HERE",    // TODO: 替换为后测问卷的真实地址
+
+  // Supabase 配置（用于在线保存被试数据，替代/补充 localStorage）
+  SUPABASE_URL: "https://moryybvgocdtevhmaqyd.supabase.co",
+  SUPABASE_KEY: "sb_publishable_21Z7blesl0YSfgswqDbZ0w_WtpnDnYC",
+  SUPABASE_TABLE: "experiment_data",   // Supabase 数据表名
 
   // 报告最低字数要求（按汉字字符数统计）
   MIN_WORDS: 600,
@@ -479,8 +485,45 @@ function appendUrlParams(url, params) {
   return url + separator + query;
 }
 
-submitBtn.addEventListener("click", function () {
+// 将数据 POST 到 Supabase；未配置或请求失败都不抛出异常，仅在控制台记录错误
+async function submitToSupabase(record) {
+  if (CONFIG.SUPABASE_URL === "YOUR_SUPABASE_URL" || CONFIG.SUPABASE_KEY === "YOUR_SUPABASE_KEY") {
+    console.error("[Supabase] 尚未配置 SUPABASE_URL / SUPABASE_KEY，数据仅保存在 localStorage。");
+    return;
+  }
+  try {
+    const response = await fetch(CONFIG.SUPABASE_URL + "/rest/v1/" + CONFIG.SUPABASE_TABLE, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": CONFIG.SUPABASE_KEY,
+        "Authorization": "Bearer " + CONFIG.SUPABASE_KEY,
+        "Prefer": "return=minimal"
+      },
+      // 注意：Postgres 中 group 是保留字，这里用 group_name 作为列名
+      body: JSON.stringify({
+        pid: record.pid,
+        group_name: record.group,
+        essay: record.essay,
+        chat_history: record.chatHistory,
+        duration: record.duration,
+        timestamp: record.timestamp
+      })
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error("HTTP " + response.status + "：" + errText);
+    }
+  } catch (err) {
+    console.error("[Supabase] 数据提交失败，已降级为仅本地保存：", err);
+  }
+}
+
+submitBtn.addEventListener("click", async function () {
   if (submitBtn.disabled) return;
+  submitBtn.disabled = true;
+  submitBtn.textContent = "提交中...";
+
   const durationSeconds = Math.round((Date.now() - startTime) / 1000);
   const record = {
     pid: pid,
@@ -490,7 +533,10 @@ submitBtn.addEventListener("click", function () {
     duration: durationSeconds,
     timestamp: new Date().toISOString()
   };
+  // 无论 Supabase 是否提交成功，都先在本地保存一份作为兜底备份
   localStorage.setItem("psychExpData_" + pid, JSON.stringify(record));
+
+  await submitToSupabase(record);
 
   const nextUrl = appendUrlParams(CONFIG.NEXT_URL, { pid: pid, group: group });
   window.location.href = nextUrl;
