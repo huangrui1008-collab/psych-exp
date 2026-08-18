@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>商业策略报告撰写实验</title>
+<title>在线研究任务</title>
 <style>
   /* ========== 基础样式 ========== */
   * { box-sizing: border-box; }
@@ -15,13 +15,145 @@
   }
   body { display: flex; flex-direction: column; min-height: 100vh; }
 
-  /* ========== 顶部区域 ========== */
-  header {
+  /* ========== 顶部进度条区域 ========== */
+  #topBar {
+    background: #ffffff;
+    border-bottom: 1px solid #dfe2e6;
+    padding: 12px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  #topBar h1 {
+    margin: 0 0 8px 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a2b4c;
+  }
+  .progress-track {
+    background: #e5e7eb;
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .progress-fill {
+    background: #2b6cb0;
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+  #stepLabel { font-size: 12px; color: #888; }
+
+  /* ========== 分组错误提示（全屏） ========== */
+  #groupErrorScreen {
+    display: none;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  #groupErrorScreen .box {
+    max-width: 480px;
+    text-align: center;
+    background: #fdeaea;
+    border: 1px solid #f3b3b3;
+    color: #a30000;
+    border-radius: 8px;
+    padding: 24px;
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  /* ========== 步骤容器 ========== */
+  #app { flex: 1; display: flex; flex-direction: column; }
+  .step { display: none; flex: 1; flex-direction: column; }
+  .step.active { display: flex; }
+
+  /* 除第1步外，其余步骤用居中窄栏展示 */
+  .step-inner {
+    max-width: 820px;
+    width: 100%;
+    margin: 32px auto;
+    padding: 0 20px 20px;
+  }
+  .step-title { font-size: 18px; font-weight: 600; color: #1a2b4c; margin: 0 0 10px 0; }
+  .step-intro {
+    font-size: 14px;
+    line-height: 1.8;
+    color: #333;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+  }
+
+  /* ---------- 矩阵量表表格 ---------- */
+  .likert-wrap { overflow-x: auto; margin-top: 6px; }
+  table.likert-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
+  .likert-table th, .likert-table td { padding: 8px 6px; text-align: center; border-bottom: 1px solid #eee; }
+  .likert-table thead th { font-weight: 500; color: #666; font-size: 11px; line-height: 1.4; }
+  .likert-table td.q-text { text-align: left; font-size: 13px; line-height: 1.6; color: #222; min-width: 220px; }
+  .likert-table tbody tr:hover { background: #fafbfc; }
+  .likert-table tbody tr.row-missing { background: #fff5f5; }
+  .likert-table input[type="radio"] { cursor: pointer; }
+
+  /* ---------- 单选题（填充任务 / 脱机测试 / 自估） ---------- */
+  .choice-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    background: #fff;
+  }
+  .choice-item.row-missing { border-color: #e57373; background: #fff5f5; }
+  .choice-index { font-size: 12px; color: #888; margin-bottom: 6px; }
+  .choice-q-text { font-size: 14px; line-height: 1.7; color: #222; white-space: pre-wrap; }
+  .filler-symbols {
+    text-align: center;
+    font-size: 30px;
+    letter-spacing: 6px;
+    margin: 14px 0;
+  }
+  .filler-symbols .filler-vs { font-size: 13px; color: #999; margin: 0 24px; letter-spacing: 0; vertical-align: middle; }
+  .mc-options { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .mc-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: 1px solid #d0d5dc;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .mc-option:hover { border-color: #2b6cb0; }
+  .mc-option input { margin: 0; cursor: pointer; }
+
+  /* ---------- 校验错误提示 / 下一步按钮 ---------- */
+  .validation-error { display: none; color: #c0392b; font-size: 13px; margin-top: 10px; }
+  .step-nav { display: flex; justify-content: flex-end; margin-top: 20px; }
+  .next-btn {
+    border: none;
+    border-radius: 6px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    background: #1a7d3a;
+    cursor: pointer;
+  }
+  .next-btn:hover { background: #145e2c; }
+  .next-btn:disabled { background: #b9c3cf; cursor: not-allowed; }
+
+  /* ========== 第1步：AI对话 + 报告撰写（原有布局） ========== */
+  #step-1 header {
     background: #ffffff;
     border-bottom: 1px solid #dfe2e6;
     padding: 16px 24px;
   }
-  header h1 {
+  #step-1 header h2 {
     font-size: 18px;
     margin: 0 0 8px 0;
     color: #1a2b4c;
@@ -43,24 +175,10 @@
     border-radius: 6px;
     font-weight: 500;
   }
-  .condition-banner.group-a {
-    background: #fff4e5;
-    border: 1px solid #f5c98f;
-    color: #8a5a00;
-  }
-  .condition-banner.group-b {
-    background: #e8f1ff;
-    border: 1px solid #a9c8f7;
-    color: #1a4a8a;
-  }
-  .condition-banner.group-err {
-    background: #fdeaea;
-    border: 1px solid #f3b3b3;
-    color: #a30000;
-  }
+  .condition-banner.group-a { background: #fff4e5; border: 1px solid #f5c98f; color: #8a5a00; }
+  .condition-banner.group-b { background: #e8f1ff; border: 1px solid #a9c8f7; color: #1a4a8a; }
 
-  /* ========== 中间主体：左右两栏 ========== */
-  main {
+  #step-1 main {
     flex: 1;
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -69,7 +187,7 @@
     min-height: 0;
   }
   @media (max-width: 860px) {
-    main { grid-template-columns: 1fr; }
+    #step-1 main { grid-template-columns: 1fr; }
   }
 
   .panel {
@@ -90,7 +208,6 @@
     background: #fafbfc;
   }
 
-  /* ---------- 左栏：AI对话 ---------- */
   #chatMessages {
     flex: 1;
     overflow-y: auto;
@@ -108,18 +225,8 @@
     white-space: pre-wrap;
     word-break: break-word;
   }
-  .msg.user {
-    align-self: flex-end;
-    background: #2b6cb0;
-    color: #fff;
-    border-bottom-right-radius: 3px;
-  }
-  .msg.assistant {
-    align-self: flex-start;
-    background: #f1f3f5;
-    color: #222;
-    border-bottom-left-radius: 3px;
-  }
+  .msg.user { align-self: flex-end; background: #2b6cb0; color: #fff; border-bottom-right-radius: 3px; }
+  .msg.assistant { align-self: flex-start; background: #f1f3f5; color: #222; border-bottom-left-radius: 3px; }
   .typing-dots {
     align-self: flex-start;
     background: #f1f3f5;
@@ -176,7 +283,6 @@
   #sendBtn:hover { background: #235a92; }
   #sendBtn:disabled { background: #b9c3cf; cursor: not-allowed; }
 
-  /* ---------- 右栏：报告撰写 ---------- */
   #essayText {
     flex: 1;
     border: none;
@@ -195,10 +301,7 @@
     align-items: center;
     background: #fafbfc;
   }
-  #wordCountLabel {
-    font-size: 13px;
-    color: #666;
-  }
+  #wordCountLabel { font-size: 13px; color: #666; }
   #wordCountLabel.enough { color: #1a7d3a; font-weight: 600; }
   #submitBtn {
     border: none;
@@ -211,11 +314,13 @@
     cursor: not-allowed;
     transition: background 0.2s;
   }
-  #submitBtn.active {
-    background: #1a7d3a;
-    cursor: pointer;
-  }
+  #submitBtn.active { background: #1a7d3a; cursor: pointer; }
   #submitBtn.active:hover { background: #145e2c; }
+
+  /* ========== 结束页 ========== */
+  .done-screen { text-align: center; padding: 100px 20px; }
+  .done-screen h2 { font-size: 20px; color: #1a2b4c; margin-bottom: 12px; }
+  .done-screen p { font-size: 14px; color: #555; line-height: 1.8; }
 
   /* ========== 底部计时区域 ========== */
   footer {
@@ -224,8 +329,6 @@
     color: #888;
     background: #fff;
     border-top: 1px solid #dfe2e6;
-    display: flex;
-    justify-content: space-between;
   }
 </style>
 </head>
@@ -236,37 +339,75 @@
      CONFIG 对象中，部署前请务必检查并填写。                        -->
 <!-- ========================================================= -->
 
-<header>
-  <h1>商业策略报告撰写任务</h1>
-  <div class="task-desc" id="taskDesc"></div>
-  <div class="condition-banner" id="conditionBanner"></div>
-</header>
+<div id="topBar">
+  <h1>在线研究任务</h1>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div id="stepLabel">第 1 步 / 共 9 步</div>
+</div>
 
-<main>
-  <!-- 左栏：AI 对话 -->
-  <section class="panel">
-    <div class="panel-header">AI 助手对话</div>
-    <div id="chatMessages"></div>
-    <div class="chat-input-area">
-      <textarea id="chatInput" placeholder="请输入内容，Enter 发送，Shift+Enter 换行"></textarea>
-      <button id="sendBtn">发送</button>
+<div id="groupErrorScreen">
+  <div class="box">URL 缺少有效的 group 参数（应为 ?group=A 或 ?group=B），请检查您收到的实验链接是否完整。</div>
+</div>
+
+<div id="app">
+
+  <!-- 第0步：SNAIL 前测 -->
+  <section class="step active" id="step-0"></section>
+
+  <!-- 第1步：AI 对话 + 报告撰写（原有功能） -->
+  <section class="step" id="step-1">
+    <header>
+      <h2>商业策略报告撰写任务</h2>
+      <div class="task-desc" id="taskDesc"></div>
+      <div class="condition-banner" id="conditionBanner"></div>
+    </header>
+    <main>
+      <section class="panel">
+        <div class="panel-header">AI 助手对话</div>
+        <div id="chatMessages"></div>
+        <div class="chat-input-area">
+          <textarea id="chatInput" placeholder="请输入内容，Enter 发送，Shift+Enter 换行"></textarea>
+          <button id="sendBtn">发送</button>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-header">策略建议报告撰写区</div>
+        <textarea id="essayText" placeholder="请在此撰写您的策略建议报告（600-1000字）..."></textarea>
+        <div class="essay-footer">
+          <span id="wordCountLabel">已输入 0 字</span>
+          <button id="submitBtn" disabled>下一步</button>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <!-- 第2步：操纵检验 Hou -->
+  <section class="step" id="step-2"></section>
+  <!-- 第3步：代理感 SoAS -->
+  <section class="step" id="step-3"></section>
+  <!-- 第4步：填充任务 -->
+  <section class="step" id="step-4"></section>
+  <!-- 第5步：心理所有权 PO -->
+  <section class="step" id="step-5"></section>
+  <!-- 第6步：学习获得感 CAP -->
+  <section class="step" id="step-6"></section>
+  <!-- 第7步：脱机测试 -->
+  <section class="step" id="step-7"></section>
+  <!-- 第8步：自估正确率 -->
+  <section class="step" id="step-8"></section>
+
+  <!-- 完成页 -->
+  <section class="step" id="step-done">
+    <div class="done-screen">
+      <h2>感谢您的参与</h2>
+      <p>本次研究任务到此结束，您的作答已提交。<br>感谢您的耐心配合！</p>
     </div>
   </section>
 
-  <!-- 右栏：报告撰写 -->
-  <section class="panel">
-    <div class="panel-header">策略建议报告撰写区</div>
-    <textarea id="essayText" placeholder="请在此撰写您的策略建议报告（600-1000字）..."></textarea>
-    <div class="essay-footer">
-      <span id="wordCountLabel">已输入 0 字</span>
-      <button id="submitBtn" disabled>提交报告</button>
-    </div>
-  </section>
-</main>
+</div>
 
 <footer>
   <span id="elapsedTime">已进行 0 分钟</span>
-  <span id="groupInfo"></span>
 </footer>
 
 <script>
@@ -274,9 +415,8 @@
    ============================ 配置区（务必检查） ============================
    部署前请修改以下参数：
    1. API_KEY            —— DeepSeek 平台申请的 API Key
-   2. NEXT_URL            —— 提交完成后跳转的后测问卷地址
-   3. SUPABASE_URL/KEY    —— Supabase 项目地址与匿名 Key（用于保存被试数据）
-   其余参数（系统提示词、任务说明文案等）可根据实验设计按需调整。
+   2. SUPABASE_URL/KEY    —— Supabase 项目地址与匿名 Key（用于保存被试数据）
+   其余参数（系统提示词、任务说明文案、各量表题目等）可根据实验设计按需调整。
    ========================================================================= */
 const CONFIG = {
   // DeepSeek API 相关配置
@@ -284,18 +424,15 @@ const CONFIG = {
   API_KEY: "sk-74dedd9ad1094a92b8622e60b2e09b6a",
   MODEL: "deepseek-chat",
 
-  // 后测问卷跳转地址（会自动附加 ?pid=xxx&group=xxx）
-  NEXT_URL: "https://v.wjx.cn/vm/wF8mCZ8.aspx",
-
-  // Supabase 配置（用于在线保存被试数据，替代/补充 localStorage）
+  // Supabase 配置（用于在线保存被试数据）
   SUPABASE_URL: "https://moryybvgocdtevhmaqyd.supabase.co",
   SUPABASE_KEY: "sb_publishable_21Z7blesl0YSfgswqDbZ0w_WtpnDnYC",
-  SUPABASE_TABLE: "experiment_data",   // Supabase 数据表名
+  SUPABASE_TABLE: "experiment_data",
 
   // 报告最低字数要求（按汉字字符数统计）
   MIN_WORDS: 600,
 
-  // 顶部任务说明文案
+  // 第1步任务说明文案
   TASK_DESCRIPTION: "请以商业咨询顾问身份，针对宜家进入中国二手家具市场撰写策略建议报告（600-1000字），涵盖：①商业模式对比（至少两种）②品牌定位建议 ③整合策略。",
 
   // 两组的条件横幅文案
@@ -307,7 +444,7 @@ const CONFIG = {
   // 两组的系统提示词（决定 AI 的行为方式）
   SYSTEM_PROMPT: {
     A: "你是一位经验丰富的商业咨询专家，负责直接为用户完成报告撰写。规则：当用户描述任务需求时，立即生成完整的600-1000字策略报告，包含商业模式对比、品牌定位和整合策略三个部分。直接输出报告正文，不要询问更多问题，不要只给框架。用户只需核对和小幅润色后即可提交。任务：宜家进入中国二手家具市场的策略分析报告。",
-    B: "你是一位严格的学习引导助手，绝对不能替用户写报告。规则：①绝对禁止生成完整报告段落；②当用户要求直接生成时，礼貌拒绝并引导思考；③只能做：提出启发性问题、提供逻辑框架、给予简短反馈、指出逻辑漏洞；④每次回复不超过120字；⑤始终让用户处于认知主导地位。"
+    B: "你是一位严格的学习引导助手，绝对不能替用户写报告。规则：①绝对禁止生成完整报告段落；②当用户要求直接生成时，礼貌拒绝并引导思考；③可以做：提出启发性问题、简要说明相关商业概念或背景知识（不超过4-5句话）、提供逻辑框架、给予简短反馈、指出逻辑漏洞；④若用户询问具体知识点（如某种商业模式的定义、行业背景信息），应直接简要说明关键信息，不要求用户查阅外部资料或研究报告；⑤每次回复不超过200字；⑥始终让用户处于认知主导地位，即使提供知识点后，也要引导用户自己组织、分析、下结论，不能替用户完成整合与写作。"
   },
 
   // 两组 AI 的首条开场消息（不调用 API，直接展示）
@@ -320,235 +457,755 @@ const CONFIG = {
    ============================ 配置区结束 ============================
    ========================================================================= */
 
+// ---------- 量表通用刻度 ----------
+const AGREE7 = ["强烈不同意", "不同意", "比较不同意", "中立", "比较同意", "同意", "强烈同意"];
+const FREQ7 = ["几乎从不", "很少", "偶尔", "有时", "经常", "很频繁", "几乎总是"];
+
+// ---------- 各矩阵量表题目配置 ----------
+const SNAIL_CFG = {
+  key: "snail_responses",
+  title: "开始之前，请先回答几个背景问题",
+  intro: "请根据您的真实情况，选择您对以下陈述的同意程度。",
+  scale: AGREE7,
+  questions: [
+    { id: "q1", text: "我能举出日常生活中接触AI的例子（如写作辅助）。" },
+    { id: "q2", text: "我能说出几个由AI支持的技术应用，比如自动生成报告。" },
+    { id: "q3", text: "我能判断我使用的工具是否由AI支持。" },
+    { id: "q4", text: "我能判断自己专业领域里的某个问题，是否适合用人工智能的方法来解决。" },
+    { id: "q5", text: "我能举出AI辅助语言处理（比如智能写作）方面的应用例子。" },
+    { id: "q6", text: "我能说出人工智能为什么在近年来变得越来越重要。" },
+    { id: "q7", text: "我能对人工智能在至少一个学科领域中的应用和影响，做出自己的判断。" }
+  ]
+};
+
+const HOU_CFG = {
+  key: "hou_responses",
+  title: "回顾刚才的写作过程",
+  intro: "接下来请回忆您刚才与AI互动、撰写这篇报告的整个过程，根据实际发生的情况回答以下问题，答案没有对错之分，请如实作答。",
+  scale: FREQ7,
+  questions: [
+    { id: "q1", text: "我会专门设计提示词，让AI给出我想要的结果。" },
+    { id: "q2", text: "AI给出结果后，我会认真、带着批判的眼光去看它。" },
+    { id: "q3", text: "我会反复修改提示词，直到AI给出更合适的结果。" },
+    { id: "q4", text: "我会让AI帮我润色、改进初稿内容。" },
+    { id: "q5", text: "本题请选择\"1（几乎从不）\"。" },
+    { id: "q6", text: "我仔细检查后，发现了AI给出结果中的错误。" },
+    { id: "q7", text: "我没有采用AI给出的结果，直接放弃了它。" },
+    { id: "q8", text: "我几乎没靠AI帮忙，自己独立完成了写作任务中的某一部分。" },
+    { id: "q9", text: "我发现AI给出的结果并不完美，不能直接拿来用。" },
+    { id: "q10", text: "我会把完整的写作要求直接复制给AI，让它直接给结果。" },
+    { id: "q11", text: "我直接把AI给的内容复制过来，当作文章的最终内容。" },
+    { id: "q12", text: "完成写作任务时，我大部分时间都花在让AI生成内容上，而不是自己思考。" },
+    { id: "q13", text: "我基本直接用了AI给的内容，没有做太大改动。" }
+  ]
+};
+
+const SOA_CFG = {
+  key: "soa_responses",
+  title: "回顾刚才完成报告时的感受",
+  intro: "请回忆您刚才完成这篇报告时的感受，回答以下问题。",
+  scale: AGREE7,
+  questions: [
+    { id: "q1", text: "我完全掌控着自己所做的事情。" },
+    { id: "q2", text: "我感觉自己只是被别人或别的东西操控的工具。" },
+    { id: "q3", text: "我的行动似乎并不是出于我的本意，而是自己发生的。" },
+    { id: "q4", text: "这件事从头到尾都是我自己主导完成的。" },
+    { id: "q5", text: "我的行动所产生的结果通常会让我感到意外。" },
+    { id: "q6", text: "我做的所有事，都完全出于自己的意愿。" },
+    { id: "q7", text: "要不要做、什么时候做，都是我自己决定的。" },
+    { id: "q8", text: "我所做的事，其实没有一件是我心甘情愿去做的。" },
+    { id: "q9", text: "在行动过程中，我感觉自己像一个被遥控的机器人。" },
+    { id: "q10", text: "我的行为从始至终都是由我自己规划的。" },
+    { id: "q11", text: "我对自己行动带来的所有结果，负有完全的责任。" }
+  ]
+};
+
+const PO_CFG = {
+  key: "po_responses",
+  title: "关于这篇文章",
+  intro: "请再次回忆您刚才完成的这篇报告，回答以下问题。",
+  scale: AGREE7,
+  questions: [
+    { id: "q1", text: "我觉得这篇文章是我的。" },
+    { id: "q2", text: "我对这篇文章有较强的个人拥有感。" },
+    { id: "q3", text: "我觉得自己拥有这篇写作成果。" }
+  ]
+};
+
+const CAP_CFG = {
+  key: "cap_responses",
+  title: "关于这次写作的收获",
+  intro: "以下问题请结合您完成这篇报告之后的真实感受和收获来回答。",
+  scale: AGREE7,
+  questions: [
+    { id: "q1", text: "我能把繁杂的资料，整理成一个逻辑清晰的写作框架。" },
+    { id: "q2", text: "对于写作过程中收集到的资料，我能做出自己的判断和评价。" },
+    { id: "q3", text: "这次写作的经历，让我对这个主题原来的看法有了改变。" },
+    { id: "q4", text: "完成这篇报告后，我在学术分析和写作上感到更加自信和独立。" },
+    { id: "q5", text: "这次任务让我开始用更成熟、更深入的方式去思考问题。" }
+  ]
+};
+
+// ---------- 第4步：填充任务（符号配对，正确答案仅内部使用，不计入分析） ----------
+const FILLER_QUESTIONS = [
+  { id: "q1", left: "▲●■★", right: "▲●■☆" },
+  { id: "q2", left: "○□♦▲", right: "○□♦▲" },
+  { id: "q3", left: "★☆●■", right: "★☆●■" },
+  { id: "q4", left: "◇♣△○", right: "◇♠△○" },
+  { id: "q5", left: "■▲☆♦", right: "▲■☆♦" }
+];
+
+// ---------- 第7步：脱机测试（10题单选，前端自动判分） ----------
+const OFFLINE_TEST_QUESTIONS = [
+  {
+    id: "q1",
+    text: "在宜家进入中国二手家具市场的分析中，\"自营回购翻新再售\"模式与\"第三方平台撮合\"模式最根本的区别在于？",
+    options: [
+      { value: "A", label: "前者只适合线上渠道，后者只适合线下实体渠道" },
+      { value: "B", label: "前者资产投入极重，后者完全不需要任何资本投入" },
+      { value: "C", label: "前者由宜家直接控制货源和品质，后者主要依赖用户之间自行完成交易" },
+      { value: "D", label: "两者面向的目标消费群体完全不同" }
+    ],
+    correct: "C"
+  },
+  {
+    id: "q2",
+    text: "在制定宜家二手家具的品牌定位策略时，最需要优先解决的核心矛盾是？",
+    options: [
+      { value: "A", label: "如何避免二手产品线与宜家主线新品产生直接竞争，蚕食主线利润" },
+      { value: "B", label: "如何将二手业务彻底独立于宜家主品牌，建立全新的子品牌形象" },
+      { value: "C", label: "如何吸引高端消费者，将翻新宜家产品定位为设计师级别的收藏品" },
+      { value: "D", label: "如何通过激进降价，将二手宜家打造成市场上最低价的产品线" }
+    ],
+    correct: "A"
+  },
+  {
+    id: "q3",
+    text: "从市场进入时序的角度，宜家在中国推进二手家具业务时，城市布局最合理的策略是？",
+    options: [
+      { value: "A", label: "立刻在全国所有城市同步铺开，以规模优势压制竞争对手" },
+      { value: "B", label: "仅在北上广深四城长期运营，永久放弃其他城市市场" },
+      { value: "C", label: "优先进入三四线城市，因为这些地区竞争更少、场地租金更低" },
+      { value: "D", label: "优先覆盖已有宜家门店、存量用户基础密集的一二线城市" }
+    ],
+    correct: "D"
+  },
+  {
+    id: "q4",
+    text: "耐克计划在中国推出二手运动鞋业务。根据宜家案例商业模式对比的分析框架，以下哪个判断最合理？",
+    options: [
+      { value: "A", label: "耐克应完全复制宜家的自营回购翻新模式，因为二者都是实体商品" },
+      { value: "B", label: "耐克更适合采用平台撮合模式，因为运动鞋标准化程度高、用户自主交易意愿强，品控风险相对更低" },
+      { value: "C", label: "耐克不应进入二手市场，因为二手产品必然会损害品牌的专业运动形象" },
+      { value: "D", label: "耐克应优先并购一家现有的二手球鞋平台，这是唯一可行的进入方式" }
+    ],
+    correct: "B"
+  },
+  {
+    id: "q5",
+    text: "一家本土家居品牌资源有限，正在考虑进入二手家居市场，目前只能选择一个切入点先行验证。根据宜家案例整合策略的分析逻辑，最合理的优先行动是？",
+    options: [
+      { value: "A", label: "立刻开发独立的二手交易App，从一开始就掌控完整的用户数据" },
+      { value: "B", label: "先在社交媒体大规模投放广告，建立品牌认知之后再着手搭建交易体系" },
+      { value: "C", label: "直接与最大的第三方二手平台签署独家合作协议，快速获得用户规模" },
+      { value: "D", label: "先在自有门店内设置家具回收试点，利用现有门店流量低成本验证业务模型后再扩张" }
+    ],
+    correct: "D"
+  },
+  {
+    id: "q6",
+    text: "某连锁咖啡品牌推出\"咖啡渣回收再利用\"项目，用户归还咖啡渣后可换取优惠券。根据宜家二手业务品牌定位的分析逻辑，该项目最应对标的定位方向是？",
+    options: [
+      { value: "A", label: "与\"可持续生活方式\"叙事挂钩，将该项目定位为品牌环保责任的具体体现" },
+      { value: "B", label: "将其定位为高端会员专属权益，以此筛选出高净值用户群体" },
+      { value: "C", label: "不进行任何对外宣传，只作为内部供应链优化手段静默运营" },
+      { value: "D", label: "主打\"归还即省钱\"，将其定位为面向所有用户的实惠型让利工具" }
+    ],
+    correct: "A"
+  },
+  {
+    id: "q7",
+    text: "H&M考虑在中国推出二手服装业务，主要目标客群为18-28岁、注重性价比的年轻女性。根据宜家案例的整体分析框架，以下哪个策略组合最合理？",
+    options: [
+      { value: "A", label: "平台撮合模式 + 定位\"奢侈品级稀缺品质\" + 优先进入三四线城市" },
+      { value: "B", label: "纯线上化运营 + 定位\"绝版限量收藏\" + 只服务高消费能力细分用户" },
+      { value: "C", label: "自营回购翻新模式 + 定位\"平价环保生活方式\" + 优先在高校及周边商圈布点" },
+      { value: "D", label: "与第三方平台合作 + 定位\"快时尚平替\" + 全国所有渠道同步铺开" }
+    ],
+    correct: "C"
+  },
+  {
+    id: "q8",
+    text: "某报告建议宜家以官方微信小程序作为二手业务的核心交易渠道，因为微信用户基数庞大。如果目标客群调研显示大多数用户为40-55岁、数字化使用习惯较弱，这个建议最可能存在什么问题？",
+    options: [
+      { value: "A", label: "这个建议完全正确，因为微信已覆盖中国几乎所有年龄层用户" },
+      { value: "B", label: "这个建议忽视了目标客群的数字化使用门槛，应补充线下实体回收点与面对面交易渠道" },
+      { value: "C", label: "这个建议的核心问题是微信小程序开发成本过高" },
+      { value: "D", label: "价格优惠会驱使中老年消费者主动克服数字化使用障碍" }
+    ],
+    correct: "B"
+  },
+  {
+    id: "q9",
+    text: "某分析师建议宜家二手家具定价设定在同类新品的30%以内，以最大化对价格敏感型消费者的吸引力。如果宜家采用这一定价策略，最可能引发的负面连锁反应是？",
+    options: [
+      { value: "A", label: "定价过低只会引发竞争对手模仿，对宜家自身没有实质损害" },
+      { value: "B", label: "消费者对二手家具价格敏感度极低，30%的力度不足以产生购买动机" },
+      { value: "C", label: "低价是新业务打开市场最有效且没有副作用的手段" },
+      { value: "D", label: "定价过低会同时触发两个问题：品质信任质疑 + 翻新运营成本无法覆盖，业务难以持续" }
+    ],
+    correct: "D"
+  },
+  {
+    id: "q10",
+    text: "某顾问建议宜家二手业务全面主打「环保可持续」叙事。如果消费者调研显示该城市年轻用户首要购买动机是「高性价比」而非「环保理念」，这个建议最需要如何调整？",
+    options: [
+      { value: "A", label: "完全放弃环保叙事，改为与竞争对手打纯粹的价格战" },
+      { value: "B", label: "环保叙事没有问题，只需加大投放预算让更多人反复看到" },
+      { value: "C", label: "保留环保叙事作为品牌底色，但将「高性价比」作为第一触达诉求，环保作为附加价值层次呈现" },
+      { value: "D", label: "放弃当地年轻客群，转而重点服务更认可环保价值观的35岁以上消费者" }
+    ],
+    correct: "C"
+  }
+];
+
+// ---------- 生成被试唯一编号（不再依赖 URL 的 pid 参数） ----------
+function generatePid() {
+  if (window.crypto && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  // 兼容不支持 crypto.randomUUID 的环境（如本地 file:// 预览）
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 // ---------- 读取 URL 参数 ----------
 const urlParams = new URLSearchParams(window.location.search);
 let group = (urlParams.get("group") || "").toUpperCase();
-const pid = urlParams.get("pid") || ("anon_" + Math.random().toString(36).slice(2, 10));
+const pid = generatePid();
+const validGroup = (group === "A" || group === "B");
 
-const bannerEl = document.getElementById("conditionBanner");
-const taskDescEl = document.getElementById("taskDesc");
-taskDescEl.textContent = CONFIG.TASK_DESCRIPTION;
-document.getElementById("groupInfo").textContent = "被试编号：" + pid + "　分组：" + (group || "未知");
+// ---------- 全局实验数据（走完9步后一次性写入 Supabase） ----------
+const experimentData = {
+  pid: pid,
+  group: group,
+  essay: "",
+  chatHistory: [],
+  duration: 0,
+  timestamp: "",
+  snail_responses: {},
+  hou_responses: {},
+  soa_responses: {},
+  filler_responses: {},
+  po_responses: {},
+  cap_responses: {},
+  offline_test_responses: {},
+  offline_test_score: 0,
+  self_estimate: ""
+};
 
-// 校验分组参数是否合法，非法则提示并停止初始化对话功能
-let validGroup = (group === "A" || group === "B");
+const startTime = Date.now(); // 全流程开始时间戳，用于计算总时长
+
 if (!validGroup) {
-  bannerEl.className = "condition-banner group-err";
-  bannerEl.textContent = "URL 缺少有效的 group 参数（应为 ?group=A 或 ?group=B），请检查实验链接。";
+  // 分组参数缺失或非法，整个流程无法进行，只展示错误提示
+  document.getElementById("app").style.display = "none";
+  document.getElementById("topBar").style.display = "none";
+  document.getElementById("groupErrorScreen").style.display = "flex";
 } else {
+  initExperiment();
+}
+
+function initExperiment() {
+  // ---------- 步骤切换框架 ----------
+  const STEP_COUNT = 9; // 第0步 ~ 第8步
+  let currentStep = 0;
+  const progressFill = document.getElementById("progressFill");
+  const stepLabel = document.getElementById("stepLabel");
+
+  function goToStep(target) {
+    document.querySelectorAll(".step").forEach(function (el) { el.classList.remove("active"); });
+    document.getElementById("step-" + target).classList.add("active");
+    if (typeof target === "number") {
+      currentStep = target;
+      const pct = Math.round(((currentStep + 1) / STEP_COUNT) * 100);
+      progressFill.style.width = pct + "%";
+      stepLabel.textContent = "第 " + (currentStep + 1) + " 步 / 共 " + STEP_COUNT + " 步";
+    } else {
+      progressFill.style.width = "100%";
+      stepLabel.textContent = "已完成";
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ---------- 矩阵量表渲染 ----------
+  function buildLikertStep(container, cfg, stateObj, onNext) {
+    const wrap = document.createElement("div");
+    wrap.className = "step-inner";
+
+    const h = document.createElement("h2");
+    h.className = "step-title";
+    h.textContent = cfg.title;
+    wrap.appendChild(h);
+
+    const intro = document.createElement("div");
+    intro.className = "step-intro";
+    intro.textContent = cfg.intro;
+    wrap.appendChild(intro);
+
+    const tableWrap = document.createElement("div");
+    tableWrap.className = "likert-wrap";
+    const table = document.createElement("table");
+    table.className = "likert-table";
+
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    headRow.appendChild(document.createElement("th"));
+    cfg.scale.forEach(function (label, i) {
+      const th = document.createElement("th");
+      th.innerHTML = (i + 1) + "<br>" + label;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    cfg.questions.forEach(function (q, qi) {
+      const tr = document.createElement("tr");
+      tr.id = cfg.key + "-row-" + q.id;
+      const tdQ = document.createElement("td");
+      tdQ.className = "q-text";
+      tdQ.textContent = (qi + 1) + ". " + q.text;
+      tr.appendChild(tdQ);
+      cfg.scale.forEach(function (label, i) {
+        const td = document.createElement("td");
+        const input = document.createElement("input");
+        input.type = "radio";
+        input.name = cfg.key + "_" + q.id;
+        input.value = i + 1;
+        input.addEventListener("change", function () {
+          stateObj[q.id] = i + 1;
+          tr.classList.remove("row-missing");
+          errorEl.style.display = "none";
+        });
+        td.appendChild(input);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+    wrap.appendChild(tableWrap);
+
+    const errorEl = document.createElement("div");
+    errorEl.className = "validation-error";
+    errorEl.textContent = "请完成全部题目后再继续。";
+    wrap.appendChild(errorEl);
+
+    const nav = document.createElement("div");
+    nav.className = "step-nav";
+    const btn = document.createElement("button");
+    btn.className = "next-btn";
+    btn.textContent = "下一步";
+    btn.addEventListener("click", function () {
+      const missing = cfg.questions.filter(function (q) { return !(q.id in stateObj); });
+      if (missing.length > 0) {
+        errorEl.style.display = "block";
+        missing.forEach(function (q) {
+          document.getElementById(cfg.key + "-row-" + q.id).classList.add("row-missing");
+        });
+        document.getElementById(cfg.key + "-row-" + missing[0].id).scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      onNext(btn);
+    });
+    nav.appendChild(btn);
+    wrap.appendChild(nav);
+
+    container.appendChild(wrap);
+  }
+
+  // ---------- 单选题渲染（填充任务 / 脱机测试 / 自估正确率） ----------
+  function buildChoiceStep(container, cfg, stateObj, onNext) {
+    const wrap = document.createElement("div");
+    wrap.className = "step-inner";
+
+    const h = document.createElement("h2");
+    h.className = "step-title";
+    h.textContent = cfg.title;
+    wrap.appendChild(h);
+
+    if (cfg.intro) {
+      const intro = document.createElement("div");
+      intro.className = "step-intro";
+      intro.textContent = cfg.intro;
+      wrap.appendChild(intro);
+    }
+
+    const errorEl = document.createElement("div");
+    errorEl.className = "validation-error";
+    errorEl.textContent = "请完成全部题目后再继续。";
+
+    cfg.questions.forEach(function (q, qi) {
+      const qBox = document.createElement("div");
+      qBox.className = "choice-item";
+      qBox.id = cfg.key + "-row-" + q.id;
+
+      if (cfg.questions.length > 1) {
+        const idx = document.createElement("div");
+        idx.className = "choice-index";
+        idx.textContent = "第 " + (qi + 1) + " 题";
+        qBox.appendChild(idx);
+      }
+
+      if (q.render === "symbols") {
+        const symWrap = document.createElement("div");
+        symWrap.className = "filler-symbols";
+        symWrap.innerHTML = "<span>" + q.left + "</span><span class=\"filler-vs\">vs</span><span>" + q.right + "</span>";
+        qBox.appendChild(symWrap);
+      } else {
+        const qText = document.createElement("div");
+        qText.className = "choice-q-text";
+        qText.textContent = q.text;
+        qBox.appendChild(qText);
+      }
+
+      const optWrap = document.createElement("div");
+      optWrap.className = "mc-options";
+      q.options.forEach(function (opt) {
+        const label = document.createElement("label");
+        label.className = "mc-option";
+        const input = document.createElement("input");
+        input.type = "radio";
+        input.name = cfg.key + "_" + q.id;
+        input.value = opt.value;
+        input.addEventListener("change", function () {
+          stateObj[q.id] = opt.value;
+          qBox.classList.remove("row-missing");
+          errorEl.style.display = "none";
+        });
+        label.appendChild(input);
+        const span = document.createElement("span");
+        span.textContent = opt.label;
+        label.appendChild(span);
+        optWrap.appendChild(label);
+      });
+      qBox.appendChild(optWrap);
+      wrap.appendChild(qBox);
+    });
+
+    wrap.appendChild(errorEl);
+
+    const nav = document.createElement("div");
+    nav.className = "step-nav";
+    const btn = document.createElement("button");
+    btn.className = "next-btn";
+    btn.textContent = cfg.buttonText || "下一步";
+    btn.addEventListener("click", function () {
+      const missing = cfg.questions.filter(function (q) { return !(q.id in stateObj); });
+      if (missing.length > 0) {
+        errorEl.style.display = "block";
+        missing.forEach(function (q) {
+          document.getElementById(cfg.key + "-row-" + q.id).classList.add("row-missing");
+        });
+        document.getElementById(cfg.key + "-row-" + missing[0].id).scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      onNext(btn);
+    });
+    nav.appendChild(btn);
+    wrap.appendChild(nav);
+
+    container.appendChild(wrap);
+  }
+
+  // ========== 第0步：SNAIL 前测 ==========
+  buildLikertStep(document.getElementById("step-0"), SNAIL_CFG, experimentData.snail_responses, function () {
+    goToStep(1);
+  });
+
+  // ========== 第1步：AI对话 + 报告撰写（原有功能） ==========
+  const bannerEl = document.getElementById("conditionBanner");
+  const taskDescEl = document.getElementById("taskDesc");
+  taskDescEl.textContent = CONFIG.TASK_DESCRIPTION;
   bannerEl.className = "condition-banner group-" + group.toLowerCase();
   bannerEl.textContent = CONFIG.BANNER_TEXT[group];
-}
 
-// ---------- 全局状态 ----------
-const startTime = Date.now(); // 实验开始时间戳，用于计算时长
-// 对话记录：包含系统提示词、开场白及后续所有轮次，最终随提交数据一并保存
-let chatHistory = validGroup ? [
-  { role: "system", content: CONFIG.SYSTEM_PROMPT[group] },
-  { role: "assistant", content: CONFIG.FIRST_MESSAGE[group] }
-] : [];
+  experimentData.chatHistory.push(
+    { role: "system", content: CONFIG.SYSTEM_PROMPT[group] },
+    { role: "assistant", content: CONFIG.FIRST_MESSAGE[group] }
+  );
 
-// ---------- DOM 元素 ----------
-const chatMessages = document.getElementById("chatMessages");
-const chatInput = document.getElementById("chatInput");
-const sendBtn = document.getElementById("sendBtn");
-const essayText = document.getElementById("essayText");
-const wordCountLabel = document.getElementById("wordCountLabel");
-const submitBtn = document.getElementById("submitBtn");
-const elapsedTimeEl = document.getElementById("elapsedTime");
+  const chatMessages = document.getElementById("chatMessages");
+  const chatInput = document.getElementById("chatInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const essayText = document.getElementById("essayText");
+  const wordCountLabel = document.getElementById("wordCountLabel");
+  const submitBtn = document.getElementById("submitBtn");
 
-// ---------- 初始化对话区 ----------
-function renderMessage(role, content) {
-  const div = document.createElement("div");
-  div.className = "msg " + (role === "user" ? "user" : "assistant");
-  div.textContent = content;
-  chatMessages.appendChild(div);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-if (validGroup) {
+  function renderMessage(role, content) {
+    const div = document.createElement("div");
+    div.className = "msg " + (role === "user" ? "user" : "assistant");
+    div.textContent = content;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
   renderMessage("assistant", CONFIG.FIRST_MESSAGE[group]);
-} else {
-  chatInput.disabled = true;
-  sendBtn.disabled = true;
-  chatInput.placeholder = "分组参数无效，对话功能已禁用";
-}
 
-// ---------- 打字动画 ----------
-let typingIndicator = null;
-function showTyping() {
-  typingIndicator = document.createElement("div");
-  typingIndicator.className = "typing-dots";
-  typingIndicator.innerHTML = "<span></span><span></span><span></span>";
-  chatMessages.appendChild(typingIndicator);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-function hideTyping() {
-  if (typingIndicator) {
-    typingIndicator.remove();
-    typingIndicator = null;
+  let typingIndicator = null;
+  function showTyping() {
+    typingIndicator = document.createElement("div");
+    typingIndicator.className = "typing-dots";
+    typingIndicator.innerHTML = "<span></span><span></span><span></span>";
+    chatMessages.appendChild(typingIndicator);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
   }
-}
-
-// ---------- 调用 DeepSeek API ----------
-async function callDeepSeekAPI() {
-  if (CONFIG.API_KEY === "YOUR_API_KEY_HERE") {
-    hideTyping();
-    renderMessage("assistant", "【系统提示】尚未配置 API Key，请在页面配置区填写有效的 DeepSeek API Key 后重试。");
-    return;
-  }
-  try {
-    const response = await fetch(CONFIG.API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + CONFIG.API_KEY
-      },
-      body: JSON.stringify({
-        model: CONFIG.MODEL,
-        messages: chatHistory.map(m => ({ role: m.role, content: m.content }))
-      })
-    });
-    if (!response.ok) {
-      throw new Error("API 请求失败，状态码：" + response.status);
+  function hideTyping() {
+    if (typingIndicator) {
+      typingIndicator.remove();
+      typingIndicator = null;
     }
-    const data = await response.json();
-    const reply = data.choices && data.choices[0] && data.choices[0].message
-      ? data.choices[0].message.content
-      : "（未获取到有效回复）";
-    hideTyping();
-    chatHistory.push({ role: "assistant", content: reply });
-    renderMessage("assistant", reply);
-  } catch (err) {
-    hideTyping();
-    renderMessage("assistant", "【网络错误】未能获取回复，请检查网络或稍后重试。（" + err.message + "）");
   }
-}
 
-// ---------- 发送消息 ----------
-function sendMessage() {
-  const text = chatInput.value.trim();
-  if (!text || !validGroup) return;
-  chatHistory.push({ role: "user", content: text });
-  renderMessage("user", text);
-  chatInput.value = "";
-  chatInput.style.height = "auto";
-  showTyping();
-  callDeepSeekAPI();
-}
-
-sendBtn.addEventListener("click", sendMessage);
-chatInput.addEventListener("keydown", function (e) {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
-});
-// 输入框随内容自适应高度
-chatInput.addEventListener("input", function () {
-  chatInput.style.height = "auto";
-  chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + "px";
-});
-
-// ---------- 右栏字数统计 ----------
-function countChineseChars(str) {
-  const matches = str.match(/[一-龥]/g);
-  return matches ? matches.length : 0;
-}
-
-function updateWordCount() {
-  const count = countChineseChars(essayText.value);
-  if (count >= CONFIG.MIN_WORDS) {
-    wordCountLabel.textContent = "已输入 " + count + " 字（已达到最低要求）";
-    wordCountLabel.classList.add("enough");
-    submitBtn.disabled = false;
-    submitBtn.classList.add("active");
-    submitBtn.textContent = "提交报告";
-  } else {
-    const remaining = CONFIG.MIN_WORDS - count;
-    wordCountLabel.textContent = "已输入 " + count + " 字";
-    wordCountLabel.classList.remove("enough");
-    submitBtn.disabled = true;
-    submitBtn.classList.remove("active");
-    submitBtn.textContent = "还需 " + remaining + " 字";
-  }
-}
-essayText.addEventListener("input", updateWordCount);
-updateWordCount();
-
-// ---------- 提交报告 ----------
-function appendUrlParams(url, params) {
-  const separator = url.indexOf("?") === -1 ? "?" : "&";
-  const query = Object.keys(params)
-    .map(k => encodeURIComponent(k) + "=" + encodeURIComponent(params[k]))
-    .join("&");
-  return url + separator + query;
-}
-
-// 将数据 POST 到 Supabase；未配置或请求失败都不抛出异常，仅在控制台记录错误
-async function submitToSupabase(record) {
-  if (CONFIG.SUPABASE_URL === "YOUR_SUPABASE_URL" || CONFIG.SUPABASE_KEY === "YOUR_SUPABASE_KEY") {
-    console.error("[Supabase] 尚未配置 SUPABASE_URL / SUPABASE_KEY，数据仅保存在 localStorage。");
-    return;
-  }
-  try {
-    const response = await fetch(CONFIG.SUPABASE_URL + "/rest/v1/" + CONFIG.SUPABASE_TABLE, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": CONFIG.SUPABASE_KEY,
-        "Authorization": "Bearer " + CONFIG.SUPABASE_KEY,
-        "Prefer": "return=minimal"
-      },
-      // 注意：Postgres 中 group 是保留字，这里用 group_name 作为列名
-      body: JSON.stringify({
-        pid: record.pid,
-        group_name: record.group,
-        essay: record.essay,
-        chat_history: record.chatHistory,
-        duration: record.duration,
-        timestamp: record.timestamp
-      })
-    });
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error("HTTP " + response.status + "：" + errText);
+  async function callDeepSeekAPI() {
+    if (CONFIG.API_KEY === "YOUR_API_KEY_HERE") {
+      hideTyping();
+      renderMessage("assistant", "【系统提示】尚未配置 API Key，请在页面配置区填写有效的 DeepSeek API Key 后重试。");
+      return;
     }
-  } catch (err) {
-    console.error("[Supabase] 数据提交失败，已降级为仅本地保存：", err);
+    try {
+      const response = await fetch(CONFIG.API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + CONFIG.API_KEY
+        },
+        body: JSON.stringify({
+          model: CONFIG.MODEL,
+          messages: experimentData.chatHistory.map(function (m) { return { role: m.role, content: m.content }; })
+        })
+      });
+      if (!response.ok) {
+        throw new Error("API 请求失败，状态码：" + response.status);
+      }
+      const data = await response.json();
+      const reply = data.choices && data.choices[0] && data.choices[0].message
+        ? data.choices[0].message.content
+        : "（未获取到有效回复）";
+      hideTyping();
+      experimentData.chatHistory.push({ role: "assistant", content: reply });
+      renderMessage("assistant", reply);
+    } catch (err) {
+      hideTyping();
+      renderMessage("assistant", "【网络错误】未能获取回复，请检查网络或稍后重试。（" + err.message + "）");
+    }
   }
-}
 
-submitBtn.addEventListener("click", async function () {
-  if (submitBtn.disabled) return;
-  submitBtn.disabled = true;
-  submitBtn.textContent = "提交中...";
+  function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+    experimentData.chatHistory.push({ role: "user", content: text });
+    renderMessage("user", text);
+    chatInput.value = "";
+    chatInput.style.height = "auto";
+    showTyping();
+    callDeepSeekAPI();
+  }
 
-  const durationSeconds = Math.round((Date.now() - startTime) / 1000);
-  const record = {
-    pid: pid,
-    group: group,
-    essay: essayText.value,
-    chatHistory: chatHistory,
-    duration: durationSeconds,
-    timestamp: new Date().toISOString()
+  sendBtn.addEventListener("click", sendMessage);
+  chatInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+  chatInput.addEventListener("input", function () {
+    chatInput.style.height = "auto";
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + "px";
+  });
+
+  function countChineseChars(str) {
+    const matches = str.match(/[一-龥]/g);
+    return matches ? matches.length : 0;
+  }
+
+  function updateWordCount() {
+    const count = countChineseChars(essayText.value);
+    if (count >= CONFIG.MIN_WORDS) {
+      wordCountLabel.textContent = "已输入 " + count + " 字（已达到最低要求）";
+      wordCountLabel.classList.add("enough");
+      submitBtn.disabled = false;
+      submitBtn.classList.add("active");
+      submitBtn.textContent = "下一步";
+    } else {
+      const remaining = CONFIG.MIN_WORDS - count;
+      wordCountLabel.textContent = "已输入 " + count + " 字";
+      wordCountLabel.classList.remove("enough");
+      submitBtn.disabled = true;
+      submitBtn.classList.remove("active");
+      submitBtn.textContent = "还需 " + remaining + " 字";
+    }
+  }
+  essayText.addEventListener("input", updateWordCount);
+  updateWordCount();
+
+  submitBtn.addEventListener("click", function () {
+    if (submitBtn.disabled) return;
+    experimentData.essay = essayText.value;
+    goToStep(2);
+  });
+
+  // ========== 第2步：操纵检验 Hou ==========
+  buildLikertStep(document.getElementById("step-2"), HOU_CFG, experimentData.hou_responses, function () {
+    goToStep(3);
+  });
+
+  // ========== 第3步：代理感 SoAS ==========
+  buildLikertStep(document.getElementById("step-3"), SOA_CFG, experimentData.soa_responses, function () {
+    goToStep(4);
+  });
+
+  // ========== 第4步：填充任务 ==========
+  const fillerCfg = {
+    key: "filler_responses",
+    title: "图形判断",
+    intro: "接下来请完成几道简单的图形判断题，判断上下两组符号是否完全相同。",
+    questions: FILLER_QUESTIONS.map(function (q) {
+      return {
+        id: q.id,
+        render: "symbols",
+        left: q.left,
+        right: q.right,
+        options: [
+          { value: "相同", label: "相同" },
+          { value: "不同", label: "不同" }
+        ]
+      };
+    })
   };
-  // 无论 Supabase 是否提交成功，都先在本地保存一份作为兜底备份
-  localStorage.setItem("psychExpData_" + pid, JSON.stringify(record));
+  buildChoiceStep(document.getElementById("step-4"), fillerCfg, experimentData.filler_responses, function () {
+    goToStep(5);
+  });
 
-  await submitToSupabase(record);
+  // ========== 第5步：心理所有权 PO ==========
+  buildLikertStep(document.getElementById("step-5"), PO_CFG, experimentData.po_responses, function () {
+    goToStep(6);
+  });
 
-  const nextUrl = appendUrlParams(CONFIG.NEXT_URL, { pid: pid, group: group });
-  window.location.href = nextUrl;
-});
+  // ========== 第6步：学习获得感 CAP ==========
+  buildLikertStep(document.getElementById("step-6"), CAP_CFG, experimentData.cap_responses, function () {
+    goToStep(7);
+  });
 
-// ---------- 底部计时（左下角，每30秒更新一次） ----------
-function updateElapsedTime() {
-  const minutes = Math.floor((Date.now() - startTime) / 60000);
-  elapsedTimeEl.textContent = "已进行 " + minutes + " 分钟";
+  // ========== 第7步：脱机测试（自动判分，不展示对错） ==========
+  const offlineCfg = {
+    key: "offline_test_responses",
+    title: "知识回顾测试",
+    intro: "在开始下面的测试前请注意：接下来的题目请凭您对刚才写作过程的记忆和理解独立作答，请勿翻阅报告原文或查阅任何外部资料。测试约需5分钟，请一次性完成。",
+    questions: OFFLINE_TEST_QUESTIONS
+  };
+  buildChoiceStep(document.getElementById("step-7"), offlineCfg, experimentData.offline_test_responses, function () {
+    let score = 0;
+    OFFLINE_TEST_QUESTIONS.forEach(function (q) {
+      if (experimentData.offline_test_responses[q.id] === q.correct) score++;
+    });
+    experimentData.offline_test_score = score;
+    goToStep(8);
+  });
+
+  // ========== 第8步：自估正确率 ==========
+  const selfEstimateState = {};
+  const selfEstimateCfg = {
+    key: "selfest",
+    title: "最后一个问题",
+    intro: "刚才的测试已经结束，接下来最后一个问题，请凭直觉作答。",
+    buttonText: "提交",
+    questions: [
+      {
+        id: "q1",
+        text: "您觉得自己刚才那10道题大概能答对几道？",
+        options: [
+          { value: "0-2题", label: "0-2题" },
+          { value: "3-5题", label: "3-5题" },
+          { value: "6-8题", label: "6-8题" },
+          { value: "9-10题", label: "9-10题" }
+        ]
+      }
+    ]
+  };
+  buildChoiceStep(document.getElementById("step-8"), selfEstimateCfg, selfEstimateState, async function (btn) {
+    btn.disabled = true;
+    btn.textContent = "提交中...";
+    experimentData.self_estimate = selfEstimateState.q1;
+    await finishExperiment();
+    goToStep("done");
+  });
+
+  // ---------- 将全部数据一次性 POST 到 Supabase ----------
+  async function submitToSupabase(record) {
+    if (CONFIG.SUPABASE_URL === "YOUR_SUPABASE_URL" || CONFIG.SUPABASE_KEY === "YOUR_SUPABASE_KEY") {
+      console.error("[Supabase] 尚未配置 SUPABASE_URL / SUPABASE_KEY，数据仅保存在 localStorage。");
+      return;
+    }
+    try {
+      const response = await fetch(CONFIG.SUPABASE_URL + "/rest/v1/" + CONFIG.SUPABASE_TABLE, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": CONFIG.SUPABASE_KEY,
+          "Authorization": "Bearer " + CONFIG.SUPABASE_KEY,
+          "Prefer": "return=minimal"
+        },
+        // 注意：Postgres 中 group 是保留字，这里用 group_name 作为列名
+        body: JSON.stringify({
+          pid: record.pid,
+          group_name: record.group,
+          essay: record.essay,
+          chat_history: record.chatHistory,
+          duration: record.duration,
+          timestamp: record.timestamp,
+          snail_responses: record.snail_responses,
+          hou_responses: record.hou_responses,
+          soa_responses: record.soa_responses,
+          filler_responses: record.filler_responses,
+          po_responses: record.po_responses,
+          cap_responses: record.cap_responses,
+          offline_test_responses: record.offline_test_responses,
+          offline_test_score: record.offline_test_score,
+          self_estimate: record.self_estimate
+        })
+      });
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error("HTTP " + response.status + "：" + errText);
+      }
+    } catch (err) {
+      console.error("[Supabase] 数据提交失败，已降级为仅本地保存：", err);
+    }
+  }
+
+  async function finishExperiment() {
+    experimentData.duration = Math.round((Date.now() - startTime) / 1000);
+    experimentData.timestamp = new Date().toISOString();
+    // 无论 Supabase 是否提交成功，都先在本地保存一份作为兜底备份
+    localStorage.setItem("psychExpData_" + experimentData.pid, JSON.stringify(experimentData));
+    await submitToSupabase(experimentData);
+  }
+
+  // ---------- 底部计时（每30秒更新一次） ----------
+  const elapsedTimeEl = document.getElementById("elapsedTime");
+  function updateElapsedTime() {
+    const minutes = Math.floor((Date.now() - startTime) / 60000);
+    elapsedTimeEl.textContent = "已进行 " + minutes + " 分钟";
+  }
+  updateElapsedTime();
+  setInterval(updateElapsedTime, 30000);
+
+  // ---------- 初始化到第0步 ----------
+  goToStep(0);
 }
-updateElapsedTime();
-setInterval(updateElapsedTime, 30000);
 </script>
 </body>
 </html>
