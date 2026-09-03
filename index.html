@@ -339,7 +339,7 @@
      CONFIG 对象中，部署前请务必检查并填写。                        -->
 <!-- ========================================================= -->
 
-<div id="topBar">
+<div id="topBar" style="display: none;">
   <h1>在线研究任务</h1>
   <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
   <div id="stepLabel">第 1 步 / 共 9 步</div>
@@ -351,8 +351,36 @@
 
 <div id="app">
 
+  <!-- 知情同意页（不计入9步进度条） -->
+  <section class="step active" id="step-consent">
+    <div class="step-inner">
+      <h2 class="step-title">知情同意书</h2>
+      <div class="step-intro" style="white-space: pre-wrap;">您好！欢迎参与本研究。本研究由澳门城市大学应用心理学专业研究生开展，旨在探讨大学生借助AI完成学术写作任务过程中的相关心理体验与学习效果。
+
+研究流程：您将完成一份简短问卷、一项借助AI辅助的写作任务，以及随后几项简短的问卷调查，全程预计需要20-40分钟。
+
+自愿参与：您的参与完全自愿，可随时退出，不会有任何不利后果。
+
+保密声明：所有数据将匿名保存，仅用于学术研究，不会用于其他用途。
+
+如您已充分了解以上内容，并自愿参与本研究，请点击"我同意参与"；如您不同意，请点击"不同意"，系统将结束本次任务，感谢您的关注。</div>
+      <div class="step-nav" style="justify-content: center; gap: 16px;">
+        <button class="next-btn" id="declineBtn" style="background: #8a94a3;">不同意</button>
+        <button class="next-btn" id="agreeBtn">我同意参与</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 不同意后的结束页 -->
+  <section class="step" id="step-declined">
+    <div class="done-screen">
+      <h2>感谢您的关注</h2>
+      <p>您已选择不参与本研究，任务到此结束，感谢您的关注。</p>
+    </div>
+  </section>
+
   <!-- 第0步：SNAIL 前测 -->
-  <section class="step active" id="step-0"></section>
+  <section class="step" id="step-0"></section>
 
   <!-- 第1步：AI 对话 + 报告撰写（原有功能） -->
   <section class="step" id="step-1">
@@ -400,7 +428,7 @@
   <section class="step" id="step-done">
     <div class="done-screen">
       <h2>感谢您的参与</h2>
-      <p>本次研究任务到此结束，您的作答已提交。<br>感谢您的耐心配合！</p>
+      <p>再次感谢您的参与！由于研究设计需要，本次任务中AI的具体角色设定因人而异。如果您身边有同学未来也可能参与本研究，恳请您不要与他们讨论实验的具体内容，以免影响研究结果的准确性。如对本研究有任何疑问，欢迎联系研究团队：W25091100485@cityu.edu.mo。</p>
     </div>
   </section>
 
@@ -444,7 +472,7 @@ const CONFIG = {
   // 两组的系统提示词（决定 AI 的行为方式）
   SYSTEM_PROMPT: {
     A: "你是一位经验丰富的商业咨询专家，负责直接为用户完成报告撰写。规则：当用户描述任务需求时，立即生成完整的600-1000字策略报告，包含商业模式对比、品牌定位和整合策略三个部分。直接输出报告正文，不要询问更多问题，不要只给框架。用户只需核对和小幅润色后即可提交。任务：宜家进入中国二手家具市场的策略分析报告。",
-    B: "你是一位严格的学习引导助手，绝对不能替用户写报告。规则：①绝对禁止生成完整报告段落；②当用户要求直接生成时，礼貌拒绝并引导思考；③可以做：提出启发性问题、简要说明相关商业概念或背景知识（不超过4-5句话）、提供逻辑框架、给予简短反馈、指出逻辑漏洞；④若用户询问具体知识点（如某种商业模式的定义、行业背景信息），应直接简要说明关键信息，不要求用户查阅外部资料或研究报告；⑤每次回复不超过200字；⑥始终让用户处于认知主导地位，即使提供知识点后，也要引导用户自己组织、分析、下结论，不能替用户完成整合与写作。"
+    B: "你是一位耐心的写作教练，目标是帮助用户通过自己的思考完成报告，而不是直接替他完成。规则：①不能直接输出完整的报告段落或成稿；②当用户明确要求直接生成完整报告时，可以先友善说明你更倾向引导思考，但如果用户坚持，可以给出一个简短的示例片段（1-2句话）演示可能的写法，而不是完整段落，并鼓励用户在此基础上自己扩展；③可以主动提供：启发性问题、逻辑框架、相关商业概念或背景知识说明、简短反馈、指出逻辑漏洞、举例说明写作角度；④若用户询问具体知识点，应直接、清楚地说明，不要求用户查阅外部资料或研究报告；⑤语气要耐心、鼓励，避免让用户感到被反复拒绝或刁难；⑥每次回复不超过250字；⑦最终报告的整合、组织、下结论仍需由用户自己完成，但你可以在过程中给予充分的知识和思路支持。"
   },
 
   // 两组 AI 的首条开场消息（不调用 API，直接展示）
@@ -1203,8 +1231,14 @@ function initExperiment() {
   updateElapsedTime();
   setInterval(updateElapsedTime, 30000);
 
-  // ---------- 初始化到第0步 ----------
-  goToStep(0);
+  // ---------- 知情同意页交互 ----------
+  document.getElementById("agreeBtn").addEventListener("click", function () {
+    document.getElementById("topBar").style.display = "block";
+    goToStep(0);
+  });
+  document.getElementById("declineBtn").addEventListener("click", function () {
+    goToStep("declined");
+  });
 }
 </script>
 </body>
