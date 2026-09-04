@@ -400,7 +400,7 @@
       </section>
       <section class="panel">
         <div class="panel-header">策略建议报告撰写区</div>
-        <textarea id="essayText" placeholder="请在此撰写您的策略建议报告（600-1000字）..."></textarea>
+        <textarea id="essayText" placeholder="请在此撰写您的策略建议报告（400-600字）..."></textarea>
         <div class="essay-footer">
           <span id="wordCountLabel">已输入 0 字</span>
           <button id="submitBtn" disabled>下一步</button>
@@ -457,11 +457,12 @@ const CONFIG = {
   SUPABASE_KEY: "sb_publishable_21Z7blesl0YSfgswqDbZ0w_WtpnDnYC",
   SUPABASE_TABLE: "experiment_data",
 
-  // 报告最低字数要求（按汉字字符数统计）
-  MIN_WORDS: 600,
+  // 报告字数要求（按汉字字符数统计）：MIN_WORDS 为硬性提交门槛，MAX_WORDS 仅用于超字数提示，不阻止提交
+  MIN_WORDS: 400,
+  MAX_WORDS: 600,
 
   // 第1步任务说明文案
-  TASK_DESCRIPTION: "请以商业咨询顾问身份，针对宜家进入中国二手家具市场撰写策略建议报告（600-1000字），涵盖：①商业模式对比（至少两种）②品牌定位建议 ③整合策略。",
+  TASK_DESCRIPTION: "请以商业咨询顾问身份，针对宜家进入中国二手家具市场撰写策略建议报告（400-600字），涵盖：①商业模式对比（至少两种）②品牌定位建议 ③整合策略。",
 
   // 两组的条件横幅文案
   BANNER_TEXT: {
@@ -471,8 +472,8 @@ const CONFIG = {
 
   // 两组的系统提示词（决定 AI 的行为方式）
   SYSTEM_PROMPT: {
-    A: "你是一位经验丰富的商业咨询专家，负责直接为用户完成报告撰写。规则：当用户描述任务需求时，立即生成完整的600-1000字策略报告，包含商业模式对比、品牌定位和整合策略三个部分。直接输出报告正文，不要询问更多问题，不要只给框架。用户只需核对和小幅润色后即可提交。任务：宜家进入中国二手家具市场的策略分析报告。",
-    B: "你是一位耐心的写作教练，目标是帮助用户通过自己的思考完成报告，而不是直接替他完成。规则：①不能直接输出完整的报告段落或成稿；②当用户明确要求直接生成完整报告时，可以先友善说明你更倾向引导思考，但如果用户坚持，可以给出一个简短的示例片段（1-2句话）演示可能的写法，而不是完整段落，并鼓励用户在此基础上自己扩展；③可以主动提供：启发性问题、逻辑框架、相关商业概念或背景知识说明、简短反馈、指出逻辑漏洞、举例说明写作角度；④若用户询问具体知识点，应直接、清楚地说明，不要求用户查阅外部资料或研究报告；⑤语气要耐心、鼓励，避免让用户感到被反复拒绝或刁难；⑥每次回复不超过250字；⑦最终报告的整合、组织、下结论仍需由用户自己完成，但你可以在过程中给予充分的知识和思路支持。"
+    A: "你是一位经验丰富的商业咨询专家，负责直接为用户完成报告撰写。规则：当用户描述任务需求时，立即生成完整的400-600字策略报告，包含商业模式对比、品牌定位和整合策略三个部分。直接输出报告正文，不要询问更多问题，不要只给框架。用户只需核对和小幅润色后即可提交。任务：宜家进入中国二手家具市场的策略分析报告。",
+    B: "你是一位耐心的写作教练，目标是帮助用户通过自己的思考完成报告，而不是直接替他完成。规则：①不能直接输出完整的报告段落或成稿；②当用户明确要求直接生成完整报告时，可以先友善说明你更倾向引导思考，但如果用户坚持，可以给出一个简短的示例片段（1-2句话）演示可能的写法，而不是完整段落，并鼓励用户在此基础上自己扩展；③可以主动提供：启发性问题、逻辑框架、相关商业概念或背景知识说明、简短反馈、指出逻辑漏洞、举例说明写作角度；④若用户询问具体知识点，应直接、清楚地说明，不要求用户查阅外部资料或研究报告；⑤语气要耐心、鼓励，避免让用户感到被反复拒绝或刁难；⑥每次回复不超过200字；⑦最终报告的整合、组织、下结论仍需由用户自己完成，但你可以在过程中给予充分的知识和思路支持。"
   },
 
   // 两组 AI 的首条开场消息（不调用 API，直接展示）
@@ -710,9 +711,20 @@ function generatePid() {
   });
 }
 
-// ---------- 读取 URL 参数 ----------
+// ---------- 读取 URL 参数 / 分组逻辑 ----------
+// URL 带有效的 ?group=A 或 ?group=B 时按参数分组（方便测试指定分组）；
+// 不带 group 参数的干净链接（正式招募用）则由网页自动随机 50/50 分配。
+// 若带了 group 参数但值既不是 A 也不是 B，视为链接有误，仍然报错提示。
 const urlParams = new URLSearchParams(window.location.search);
-let group = (urlParams.get("group") || "").toUpperCase();
+const rawGroup = (urlParams.get("group") || "").toUpperCase();
+let group;
+if (rawGroup === "A" || rawGroup === "B") {
+  group = rawGroup;
+} else if (urlParams.has("group")) {
+  group = "";
+} else {
+  group = Math.random() < 0.5 ? "A" : "B";
+}
 const pid = generatePid();
 const validGroup = (group === "A" || group === "B");
 
@@ -1062,7 +1074,9 @@ function initExperiment() {
   function updateWordCount() {
     const count = countChineseChars(essayText.value);
     if (count >= CONFIG.MIN_WORDS) {
-      wordCountLabel.textContent = "已输入 " + count + " 字（已达到最低要求）";
+      wordCountLabel.textContent = count > CONFIG.MAX_WORDS
+        ? "已输入 " + count + " 字（已超出建议字数，可考虑精简）"
+        : "已输入 " + count + " 字（已达到要求）";
       wordCountLabel.classList.add("enough");
       submitBtn.disabled = false;
       submitBtn.classList.add("active");
