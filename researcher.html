@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://moryybvgocdtevhmaqyd.supabase.co; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<title>研究者工作台 · 研究二</title>
+<link rel="stylesheet" href="researcher.css">
+<script src="config.js" defer></script><script src="materials.js" defer></script><script src="researcher.js" defer></script>
+</head>
+<body>
+<header><div><p class="eyebrow">研究二 / 数据管理</p><h1>研究者工作台</h1><p>依赖型与增强型生成式 AI 支持 · 报告任务</p></div><a href="./">参与者入口 ↗</a></header>
+<main>
+<section class="notice" id="connection" role="status">正在检查后端。未登录时不读取参与者数据。</section>
+<section class="card" id="authCard">
+<h2>研究者登录</h2><p>使用已被授权的 Supabase Auth 研究者账号。登录成功还需通过服务端名单验证。</p>
+<form id="loginForm"><label>邮箱<input id="email" type="email" required autocomplete="username"></label><label>密码<input id="password" type="password" required autocomplete="current-password"></label><button id="loginBtn">登录并读取数据</button></form>
+<p id="authMessage" role="status"></p><p>后端未设置时，请按仓库中的 <a href="https://github.com/huangrui1008-collab/psych-exp/blob/main/SETUP.md" target="_blank" rel="noopener">安全后端设置说明</a>完成配置。此页面没有默认密码，也不会用公开 Key 读取汇总结果。</p>
+</section>
+<section class="card">
+<div class="section-head"><h2>参与与完成情况</h2><div><button id="refresh" disabled>刷新云端数据</button><button id="logout" hidden>退出登录</button></div></div>
+<p id="scope" role="status">尚未读取数据；不能据此判断参与人数。</p>
+<div id="metrics" class="metrics" hidden></div>
+<div class="toolbar"><label>组别<select id="groupFilter"><option value="">全部组别</option><option>A</option><option>B</option></select></label><label>状态<select id="statusFilter"><option value="">全部状态</option><option value="in_progress">进行中（未收到最终提交）</option><option value="completed">已完成（服务端确认）</option><option value="legacy">历史提交（缺少过程状态）</option><option value="local">本地备份（未验证云端收件）</option></select></label><label>来源<select id="sourceFilter"><option value="">全部来源</option><option value="current">当前流程</option><option value="legacy">历史表</option><option value="local">本地导入</option></select></label></div>
+<div class="toolbar"><button id="exportCsv" disabled>导出筛选结果 CSV</button><button id="exportJson" disabled>导出筛选结果 JSON</button><span id="rowCount"></span></div>
+<div class="table-wrap"><table><thead><tr><th>参与编号</th><th>组别 / 支持方式</th><th>分配方式</th><th>状态 / 当前阶段</th><th>开始 / 最后保存</th><th>核对</th></tr></thead><tbody id="rows"><tr><td colspan="6">暂无已加载的数据</td></tr></tbody></table></div>
+<p class="muted">“进行中”只表示未收到最终提交，不能判断对方是否仍在线。拒绝同意者不建档；历史表没有开始与退出记录。人数按来源分列，不推断退出人数。</p>
+<details id="recordDetail"><summary>记录详情</summary><pre id="detail"></pre></details>
+</section>
+<section class="card"><h2>本地备份核对</h2><p>可导入原页面保存的 JSON 或参与者下载的备份。文件只在当前浏览器内处理，不上传；导入数据不代表云端已收件。切换来源或重新读取云端会替换当前视图。</p><label class="file-label">选择 JSON 文件<input id="importFile" type="file" accept="application/json,.json" multiple></label></section>
+<section class="card"><h2>数据字段与研究设计</h2><p>代理感 → 对本次任务形成的报告的心理所有权 → 学习获得感；脱机测试为独立作答的客观表现。以下展示原始题目与采集字段，不擅自新增合成量表分数或反向计分规则。</p><div id="dictionary"></div><details><summary>已连接数据库的实际列结构（登录后核对）</summary><pre id="actualSchema">尚未连接，无法核对数据库实际列结构。</pre></details></section>
+</main><footer>研究数据请妥善保管 · 所有时间按浏览器本地时间显示</footer>
+</body></html>
