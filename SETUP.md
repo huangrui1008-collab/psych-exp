@@ -4,11 +4,11 @@
 
 ## 当前状态
 
-2026-11-06：GitHub Pages 已发布。原 Supabase 项目已从暂停状态恢复为 Healthy；完整数据库备份已保留在本机私有工作目录。已执行新增过程表与权限设置，复核历史表仍有1条记录、17个字段，新过程表为空，数据权限检查通过。
+2026-11-07：GitHub Pages 已发布。原 Supabase 项目已从暂停状态恢复为 Healthy；完整数据库备份已保留在本机私有工作目录。已执行新增过程表、权限设置与指定邮箱授权绑定，复核历史表仍有1条记录、17个字段，新过程表为空，数据权限检查通过。研究者账号尚待本人设置密码并创建；尚未完成真实账号登录和下载验收。
 
 仅授权 `huangrui1008@gmail.com` 查看、导出云端研究数据。研究者服务 `research-api` 独立于被试与 AI 服务，不要求配置 AI 密钥；它必须同时核验真实 Auth 会话、已确认邮箱和服务端账号名单。其他账号即使误入名单也不能访问。
 
-被试服务 `experiment-api` 继续保留平台 JWT 校验，在线招募和 AI 尚未开通。不要为启用数据下载而关闭被试服务的认证。研究者账号的密码由用户本人设置。
+被试服务 `experiment-api` 继续保留平台 JWT 校验，在线招募和 AI 尚未开通。不要为启用数据下载而关闭被试服务的认证。研究者账号的密码由用户本人设置。[邮箱绑定设置](supabase/migrations/202611060002_owner_researcher.sql)会在该邮箱的真实账号创建且确认后自动绑定下载权限；其他邮箱不会获得权限，该账号改为其他邮箱时会撤销名单资格。
 
 ## 1. 保护现有数据与密钥
 
@@ -18,14 +18,14 @@
 
 ## 2. 执行数据库设置
 
-在**原项目** Supabase Dashboard → SQL Editor 执行 [迁移文件](supabase/migrations/202611060001_secure_study2.sql)。它：
+在**原项目** Supabase Dashboard → SQL Editor 依次执行 [安全设置](supabase/migrations/202611060001_secure_study2.sql)和[指定邮箱授权绑定](supabase/migrations/202611060002_owner_researcher.sql)。安全设置：
 
 - 新建过程表 `study2_sessions`、研究者白名单 `study2_researchers`、每日额度表 `study2_quotas`；开启 RLS。
 - 禁止匿名与普通登录用户直接访问这些表及历史表。服务角色只在函数内使用。
 - 保留历史表数据、列定义和现有策略；撤销其前端角色的表级与列级权限。旧页面直接 POST 将失效，参与者需刷新进入新流程。
 - 提供原子额度预留、权限健康检查和实际列结构核对函数，只允许服务角色调用。
 
-不需要把 service-role key 加到网页。Supabase 内置 `SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY` 自动供函数使用。迁移没有 DELETE、TRUNCATE 或 DROP TABLE。不要恢复历史表的匿名 SELECT 权限。
+不需要把 service-role key 加到网页。Supabase 内置 `SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY` 自动供函数使用。安全设置不删除研究数据；邮箱绑定脚本仅在账号变更为其他邮箱时删除对应白名单资格，不删除研究记录。不要恢复历史表的匿名 SELECT 权限。
 
 ## 3. 部署函数并设置密钥
 
@@ -50,11 +50,11 @@ supabase functions deploy research-api --no-verify-jwt
 
 `research-api` 关闭的仅是旧式平台 JWT 校验；函数内仍通过 Auth.getUser 验证真实会话，并强制核对已确认的 `huangrui1008@gmail.com` 和服务器账号名单。它没有被试开始、AI 或写入接口。`experiment-api` 当前保留平台校验，不因下载授权而对匿名访客开放。CORS 限制不能代替身份验证。
 
-健康接口仅在私密 AI key 存在、迁移成功且保护表不向 anon/authenticated 授权时返回 `ready:true`。它不花费 AI 额度，也不能证明 AI key 有效；正式开始前仍需一次标记为测试的完整试跑。
+`research-api/health` 仅检查数据权限设置，已返回 `ready:true`，不代表账号已创建或被试入口已开通。`experiment-api/health` 仅在私密 AI key 存在、迁移成功且保护表不向 anon/authenticated 授权时返回 `ready:true`。它不花费 AI 额度，也不能证明 AI key 有效；正式开始前仍需一次标记为测试的完整试跑。
 
 ## 4. 创建并授权研究者
 
-在 Supabase Authentication → Users 创建自己的邮箱密码用户，密码由本人设置。无需开放公众注册。确认账号邮箱为 `huangrui1008@gmail.com` 后，在 SQL Editor 执行：
+在 Supabase Authentication → Users → Add user → Create new user 创建 `huangrui1008@gmail.com` 的邮箱密码用户，密码由本人设置并提交，保持 Auto confirm user 勾选。无需开放公众注册。已部署的邮箱绑定会自动授予该已确认邮箱的真实账号下载权限；正常创建后无需手动执行 SQL。仅在维护旧部署、尚未安装邮箱绑定时使用以下补充授权：
 
 ```sql
 insert into public.study2_researchers(user_id)
