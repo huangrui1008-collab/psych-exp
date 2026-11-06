@@ -52,7 +52,7 @@ async function jsonFetch(url, init={}) {
   if (!r.ok) throw new Error(data.error_description||data.error||data.msg||'请求失败（'+r.status+'）');
   return data;
 }
-function research(path) {return jsonFetch(APP_CONFIG.API_BASE+'/research/'+path,{headers:{apikey:APP_CONFIG.SUPABASE_KEY,Authorization:'Bearer '+accessToken}});}
+function research(path) {return jsonFetch(APP_CONFIG.RESEARCH_API_BASE+'/research/'+path,{headers:{apikey:APP_CONFIG.SUPABASE_KEY,Authorization:'Bearer '+accessToken}});}
 function clearView() {loaded=false;records=[];viewSource='';$('detail').textContent='';$('recordDetail').open=false;$('actualSchema').textContent='尚未连接，无法核对数据库实际列结构。';render();}
 async function loadCloud() {
   const op=++operation;clearView();$('scope').textContent='正在完整读取云端记录，读取失败不会显示部分人数。';$('refresh').disabled=true;
@@ -149,4 +149,4 @@ function dictionary() {
   }
 }
 dictionary();render();
-jsonFetch(APP_CONFIG.API_BASE+'/health',{headers:{apikey:APP_CONFIG.SUPABASE_KEY}}).then(()=>{$('connection').textContent='研究服务已连接。请登录后查看云端数据。';}).catch(()=>{$('connection').textContent='安全后端暂未连接或尚未完成设置。当前不能查看云端汇总；仍可核对字段、导入本地备份。';});
+jsonFetch(APP_CONFIG.RESEARCH_API_BASE+'/health',{headers:{apikey:APP_CONFIG.SUPABASE_KEY}}).then(()=>{$('connection').textContent='研究服务已连接。请登录后查看云端数据。';}).catch(()=>{$('connection').textContent='安全后端暂未连接或尚未完成设置。当前不能查看云端汇总；仍可核对字段、导入本地备份。';});

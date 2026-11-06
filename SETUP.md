@@ -4,11 +4,15 @@
 
 ## 当前状态
 
-2026-11-06：GitHub 网页已可登录并操作原仓库。原 Supabase 域名从执行环境连接时发生 TLS 连接失败；Supabase 插件已安装，但当前会话尚未提供可用管理工具。因此尚未执行生产数据库迁移、部署函数或设置研究者账号，不能证明现有 RLS 安全或云端可用。页面在健康检查失败时禁止开始新任务，研究者页不显示假人数。请完成下面设置后再正式招募。
+2026-11-06：GitHub Pages 已发布。原 Supabase 项目已从暂停状态恢复为 Healthy；完整数据库备份已保留在本机私有工作目录。已执行新增过程表与权限设置，复核历史表仍有1条记录、17个字段，新过程表为空，数据权限检查通过。
+
+仅授权 `huangrui1008@gmail.com` 查看、导出云端研究数据。研究者服务 `research-api` 独立于被试与 AI 服务，不要求配置 AI 密钥；它必须同时核验真实 Auth 会话、已确认邮箱和服务端账号名单。其他账号即使误入名单也不能访问。
+
+被试服务 `experiment-api` 继续保留平台 JWT 校验，在线招募和 AI 尚未开通。不要为启用数据下载而关闭被试服务的认证。研究者账号的密码由用户本人设置。
 
 ## 1. 保护现有数据与密钥
 
-先在原 Supabase 项目导出现有 `experiment_data` 的备份，再安排暂停招募、提醒正在参与者提交或保存备份。原版本前端包含 DeepSeek 私密密钥；必须在 DeepSeek 控制台撤销并更换。新密钥仅存为 Supabase Edge Function secret `DEEPSEEK_API_KEY`，不要发到聊天、提交到仓库或写入前端。
+先在原 Supabase 项目导出现有 `experiment_data` 的备份，再安排暂停招募、提醒正在参与者提交或保存备份。原版本前端包含 DeepSeek 私密密钥；必须在 DeepSeek 控制台撤销并更换。在线 AI 开通前，新密钥仅存为 Supabase Edge Function secret `DEEPSEEK_API_KEY`，不要发到聊天、提交到仓库或写入前端。
 
 删除当前页面中的密钥不会从 Git 历史中删除旧密钥；本次没有改写 Git 历史。Supabase publishable key 是公开项目标识，不具有后端管理权限，保留在 `config.js` 是正常用途，数据保护依靠服务器校验与数据库权限。
 
@@ -30,7 +34,8 @@
 ```sh
 supabase login
 supabase link --project-ref moryybvgocdtevhmaqyd
-supabase functions deploy experiment-api --no-verify-jwt
+supabase functions deploy experiment-api
+supabase functions deploy research-api --no-verify-jwt
 ```
 
 在 Dashboard → Edge Functions → Secrets 设置 `DEEPSEEK_API_KEY` 为新密钥。可选设置：
@@ -43,17 +48,18 @@ supabase functions deploy experiment-api --no-verify-jwt
 
 每次参与最多40次 AI 请求、每条用户消息最多6000字符。达到服务限额时明确报错，不能用模拟回复替代实验操纵。AI 系统提示词、开场消息、任务和题目均来自原代码；API 使用原 `deepseek-chat`。服务端设置输出 token 上限作为成本边界（A 1600、B 700），B 组原有“每次回复不超过200字”提示保留。模型是否遵守引导方式仍需预实验检查，提示词不是绝对保证。
 
-`verify_jwt=false` 是为了支持不注册账号的参与者；**不是公开读取数据**。参与者用随机256位参与凭据，服务器仅存其 SHA-256 哈希；研究者必须提供经 Auth.getUser 验证的 JWT，并通过服务器白名单。CORS 限制不能代替身份验证。
+`research-api` 关闭的仅是旧式平台 JWT 校验；函数内仍通过 Auth.getUser 验证真实会话，并强制核对已确认的 `huangrui1008@gmail.com` 和服务器账号名单。它没有被试开始、AI 或写入接口。`experiment-api` 当前保留平台校验，不因下载授权而对匿名访客开放。CORS 限制不能代替身份验证。
 
 健康接口仅在私密 AI key 存在、迁移成功且保护表不向 anon/authenticated 授权时返回 `ready:true`。它不花费 AI 额度，也不能证明 AI key 有效；正式开始前仍需一次标记为测试的完整试跑。
 
 ## 4. 创建并授权研究者
 
-在 Supabase Authentication → Users 创建自己的邮箱密码用户，密码由本人设置。无需开放公众注册。复制该 Auth 用户的 UUID，在 SQL Editor 执行（替换示例 UUID，不要直接照抄占位符）：
+在 Supabase Authentication → Users 创建自己的邮箱密码用户，密码由本人设置。无需开放公众注册。确认账号邮箱为 `huangrui1008@gmail.com` 后，在 SQL Editor 执行：
 
 ```sql
 insert into public.study2_researchers(user_id)
-values ('替换为自己的Auth用户UUID')
+select id from auth.users
+where lower(email) = 'huangrui1008@gmail.com' and email_confirmed_at is not null
 on conflict (user_id) do nothing;
 ```
 
