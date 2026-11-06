@@ -1,0 +1,4 @@
+[functions.experiment-api]
+# Participants authenticate with per-session capabilities; researcher JWTs are
+# verified explicitly with Auth.getUser and the server-only researcher allowlist.
+verify_jwt = false
