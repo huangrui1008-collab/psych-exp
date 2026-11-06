@@ -1,5 +1,15 @@
 'use strict';
 const $ = id => document.getElementById(id);
+const ownerEmail = 'huangrui1008@gmail.com';
+const recoveryRedirect = 'https://huangrui1008-collab.github.io/psych-exp/researcher.html';
+let recoveryToken = '';
+// Consume recovery credentials before any requests; never retain them in the URL or storage.
+const recoveryParams = new URLSearchParams(location.hash.slice(1));
+const recoveryAttempt = recoveryParams.has('access_token') || recoveryParams.has('error');
+if (recoveryAttempt) history.replaceState(null, '', location.pathname + location.search);
+if (recoveryParams.get('type') === 'recovery') recoveryToken = recoveryParams.get('access_token') || '';
+const recoveryExpired = recoveryParams.has('error') || (recoveryAttempt && !recoveryToken);
+recoveryParams.delete('access_token'); recoveryParams.delete('refresh_token');
 let accessToken = ''; // Memory only: no credentials in localStorage or URLs.
 let loaded = false;
 let records = [];
@@ -48,9 +58,52 @@ function render() {
 }
 async function jsonFetch(url, init={}) {
   const r=await fetch(url,{...init,signal:AbortSignal.timeout(20000)}); let data;
+  if (r.status === 204) return null;
   try {data=await r.json();} catch {throw new Error('服务未返回有效响应');}
   if (!r.ok) throw new Error(data.error_description||data.error||data.msg||'请求失败（'+r.status+'）');
   return data;
+}
+function authRequest(path,init={},token='') {
+  return jsonFetch(APP_CONFIG.SUPABASE_URL+'/auth/v1/'+path,{...init,headers:{'Content-Type':'application/json',apikey:APP_CONFIG.SUPABASE_KEY,...(token?{Authorization:'Bearer '+token}:{}),...init.headers}});
+}
+function loginError(error) {
+  if (/Invalid login credentials/i.test(error.message)) return '邮箱或密码未通过验证。请使用创建研究者账号时的密码，或点击下方“忘记密码”。';
+  if (/Email not confirmed/i.test(error.message)) return '该账号尚未完成邮箱确认，请先确认邮箱。';
+  return error.message;
+}
+$('recoverBtn').addEventListener('click',async()=>{
+  $('recoverBtn').disabled=true;$('recoveryMessage').textContent='正在请求恢复邮件…';
+  try {
+    await authRequest('recover?redirect_to='+encodeURIComponent(recoveryRedirect),{method:'POST',body:JSON.stringify({email:ownerEmail})});
+    $('recoveryMessage').textContent='恢复请求已受理。请检查 huangrui1008@gmail.com 的收件箱及垃圾邮件，使用最新邮件中的链接。若未收到，可能受邮件服务限额或收件人限制影响。';
+  } catch(error) {$('recoveryMessage').textContent='无法发送恢复邮件：'+error.message;}
+  finally {$('recoverBtn').disabled=false;}
+});
+function leaveRecovery() {
+  const token=recoveryToken;recoveryToken='';$('newPassword').value='';$('confirmPassword').value='';
+  $('resetCard').hidden=true;$('authCard').hidden=false;$('savePassword').disabled=true;
+  if(token)authRequest('logout?scope=global',{method:'POST'},token).catch(()=>{});
+}
+$('cancelRecovery').addEventListener('click',leaveRecovery);
+$('resetForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(!recoveryToken){$('resetMessage').textContent='恢复链接无效或已失效，请重新请求恢复邮件。';return;}
+  if($('newPassword').value.length<8 || $('newPassword').value!==$('confirmPassword').value){$('resetMessage').textContent='请使用至少8位的新密码，两次输入须一致。';return;}
+  $('savePassword').disabled=true;$('resetMessage').textContent='正在保存新密码…';
+  try {
+    await authRequest('user',{method:'PUT',body:JSON.stringify({password:$('newPassword').value})},recoveryToken);
+    leaveRecovery();$('authMessage').textContent='密码已更新。请使用新密码登录。';$('password').focus();
+  } catch(error) {$('newPassword').value='';$('confirmPassword').value='';$('resetMessage').textContent='密码未更新：'+error.message;$('savePassword').disabled=false;}
+});
+async function prepareRecovery() {
+  if(recoveryExpired){$('authMessage').textContent='恢复链接无效、已使用或已过期，请重新请求恢复邮件。';return;}
+  if(!recoveryToken)return;
+  $('authCard').hidden=true;$('resetCard').hidden=false;$('resetMessage').textContent='正在验证恢复链接…';
+  try {
+    const user=await authRequest('user',{},recoveryToken);
+    if(user.email?.trim().toLowerCase()!==ownerEmail || !user.email_confirmed_at)throw new Error('恢复链接不属于已确认的研究者邮箱。');
+    $('savePassword').disabled=false;$('resetMessage').textContent='邮箱身份已验证，请设置至少8位的新密码。';
+  } catch(error) {recoveryToken='';$('resetMessage').textContent='恢复链接验证失败：'+error.message+'。请返回登录，重新请求恢复邮件。';}
 }
 function research(path) {return jsonFetch(APP_CONFIG.RESEARCH_API_BASE+'/research/'+path,{headers:{apikey:APP_CONFIG.SUPABASE_KEY,Authorization:'Bearer '+accessToken}});}
 function clearView() {loaded=false;records=[];viewSource='';$('detail').textContent='';$('recordDetail').open=false;$('actualSchema').textContent='尚未连接，无法核对数据库实际列结构。';render();}
@@ -85,7 +138,7 @@ $('loginForm').addEventListener('submit',async e=>{
     if(loginOp!==operation)return;
     accessToken=data.access_token; $('password').value='';
     await loadCloud();
-  } catch(err) {accessToken='';$('password').value='';$('authMessage').textContent='登录或授权失败：'+err.message;$('refresh').disabled=true;}
+  } catch(err) {accessToken='';$('password').value='';$('authMessage').textContent='登录或授权失败：'+loginError(err);$('refresh').disabled=true;}
   finally {$('loginBtn').disabled=false;}
 });
 $('refresh').addEventListener('click',()=>loadCloud().catch(e=>{$('authMessage').textContent=e.message;}));
@@ -149,4 +202,5 @@ function dictionary() {
   }
 }
 dictionary();render();
+prepareRecovery();
 jsonFetch(APP_CONFIG.RESEARCH_API_BASE+'/health',{headers:{apikey:APP_CONFIG.SUPABASE_KEY}}).then(()=>{$('connection').textContent='研究服务已连接。请登录后查看云端数据。';}).catch(()=>{$('connection').textContent='安全后端暂未连接或尚未完成设置。当前不能查看云端汇总；仍可核对字段、导入本地备份。';});

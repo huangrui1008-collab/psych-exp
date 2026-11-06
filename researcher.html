@@ -6,8 +6,8 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
 <title>研究者工作台 · 研究二</title>
-<link rel="stylesheet" href="researcher.css">
-<script src="config.js" defer></script><script src="materials.js" defer></script><script src="researcher.js" defer></script>
+<link rel="stylesheet" href="researcher.css?v=20261107-recovery">
+<script src="config.js" defer></script><script src="materials.js" defer></script><script src="researcher.js?v=20261107-recovery" defer></script>
 </head>
 <body>
 <header><div><p class="eyebrow">研究二 / 数据管理</p><h1>研究者工作台</h1><p>依赖型与增强型生成式 AI 支持 · 报告任务</p></div><a href="./">参与者入口 ↗</a></header>
@@ -15,9 +15,14 @@
 <section class="notice" id="connection" role="status">正在检查后端。未登录时不读取参与者数据。</section>
 <section class="card" id="authCard">
 <h2>研究者登录</h2><p>使用已被授权的 Supabase Auth 研究者账号。登录成功还需通过服务端名单验证。</p>
-<form id="loginForm"><label>邮箱<input id="email" type="email" required autocomplete="username"></label><label>密码<input id="password" type="password" required autocomplete="current-password"></label><button id="loginBtn">登录并读取数据</button></form>
-<p id="authMessage" role="status"></p><p>后端未设置时，请按仓库中的 <a href="https://github.com/huangrui1008-collab/psych-exp/blob/main/SETUP.md" target="_blank" rel="noopener">安全后端设置说明</a>完成配置。此页面没有默认密码，也不会用公开 Key 读取汇总结果。</p>
+<form id="loginForm"><label>邮箱<input id="email" type="email" required autocomplete="username" value="huangrui1008@gmail.com" readonly></label><label>密码<input id="password" type="password" required autocomplete="current-password"></label><button id="loginBtn">登录并读取数据</button></form>
+<p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
+<button id="recoverBtn" type="button">忘记密码：发送恢复邮件</button><p id="recoveryMessage" class="auth-message" role="status" aria-live="polite"></p>
+<p class="muted">恢复邮件发送到 huangrui1008@gmail.com。打开邮件中的链接后，在此网站设置新密码。请勿分享邮件链接或密码。</p>
+<p>后端未设置时，请按仓库中的 <a href="https://github.com/huangrui1008-collab/psych-exp/blob/main/SETUP.md" target="_blank" rel="noopener">安全后端设置说明</a>完成配置。此页面没有默认密码，也不会用公开 Key 读取汇总结果。</p>
 </section>
+<section class="card" id="resetCard" hidden><h2>设置研究者新密码</h2><p>请为 huangrui1008@gmail.com 设置新密码。保存后返回登录，不会自动读取研究数据。</p>
+<form id="resetForm"><label>新密码<input id="newPassword" type="password" minlength="8" required autocomplete="new-password"></label><label>再次输入新密码<input id="confirmPassword" type="password" minlength="8" required autocomplete="new-password"></label><button id="savePassword" disabled>保存新密码</button><button id="cancelRecovery" type="button">返回登录</button></form><p id="resetMessage" class="auth-message" role="status" aria-live="polite"></p></section>
 <section class="card">
 <div class="section-head"><h2>参与与完成情况</h2><div><button id="refresh" disabled>刷新云端数据</button><button id="logout" hidden>退出登录</button></div></div>
 <p id="scope" role="status">尚未读取数据；不能据此判断参与人数。</p>
