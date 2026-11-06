@@ -63,7 +63,7 @@ export function createHandler({store, materials:m, auth, ai, ready, origins, dai
         const jwt=req.headers.get('Authorization')?.replace(/^Bearer /,'');
         const user=jwt ? await auth(jwt) : null;
         if (!user) fail(401,'请先登录研究者账号');
-        if (!await store.isResearcher(user.id)) fail(403,'此账号尚未获研究者授权');
+        if (user.email?.trim().toLowerCase() !== 'huangrui1008@gmail.com' || !user.email_confirmed_at || !await store.isResearcher(user.id)) fail(403,'此账号尚未获研究者授权');
         if (req.method!=='GET') fail(405,'方法不受支持');
         if (route==='/research/schema') return response(await store.schema());
         if (route!=='/research/records') fail(404,'接口不存在');
