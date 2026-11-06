@@ -1,4 +1,9 @@
 [functions.experiment-api]
-# Participants authenticate with per-session capabilities; researcher JWTs are
-# verified explicitly with Auth.getUser and the server-only researcher allowlist.
+# Participant enrollment remains gated until separately authorized.
+# Research data downloads use the independent research-api service below.
+verify_jwt = true
+
+[functions.research-api]
+# This read-only service validates Auth.getUser, confirmed owner email and UUID
+# membership inside the function. It exposes no participant or AI operations.
 verify_jwt = false
