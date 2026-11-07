@@ -9,6 +9,7 @@ const recoveryAttempt = recoveryParams.has('access_token') || recoveryParams.has
 if (recoveryAttempt) history.replaceState(null, '', location.pathname + location.search);
 if (recoveryParams.get('type') === 'recovery') recoveryToken = recoveryParams.get('access_token') || '';
 const recoveryExpired = recoveryParams.has('error') || (recoveryAttempt && !recoveryToken);
+if (recoveryAttempt || new URLSearchParams(location.search).has('account')) document.getElementById('legacyData').open=true;
 recoveryParams.delete('access_token'); recoveryParams.delete('refresh_token');
 let accessToken = ''; // Memory only: no credentials in localStorage or URLs.
 let loaded = false;

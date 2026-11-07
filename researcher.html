@@ -7,11 +7,14 @@
 <meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
 <title>研究者工作台 · 研究二</title>
 <link rel="stylesheet" href="researcher.css?v=20261107-recovery">
-<script src="config.js" defer></script><script src="materials.js" defer></script><script src="researcher.js?v=20261107-selftest" defer></script>
+<script src="config.js" defer></script><script src="materials.js" defer></script><script src="researcher.js?v=20261107-alien-v06" defer></script><script src="alien-researcher.js?v=20261107-alien-v06" defer></script>
 </head>
 <body>
-<header><div><p class="eyebrow">研究二 / 数据管理</p><h1>研究者工作台</h1><p>依赖型与增强型生成式 AI 支持 · 报告任务</p></div><a href="./">参与者入口 ↗</a></header>
+<header><div><p class="eyebrow">研究二 / 数据管理</p><h1>研究者工作台</h1><p>Alien Zoo V0.6 · 研究者试玩 · 条目待定</p></div><a href="./">参与者入口 ↗</a></header>
 <main>
+<section class="card"><h2>Alien Zoo V0.6 · 本机试玩记录</h2><p>这里只显示当前浏览器保存或你手动导入的游戏记录，不是云端参与者汇总。条目尚未定稿，游戏未套用旧报告问卷。</p><div class="toolbar"><button id="gameRefresh">刷新本机游戏记录</button><button id="gameExportJson" disabled>导出游戏 JSON</button><button id="gameExportCsv" disabled>导出游戏 CSV</button><label>导入游戏 JSON<input id="gameImport" type="file" accept=".json,application/json" multiple></label></div><p id="gameScope" role="status"></p><div class="table-wrap"><table><thead><tr><th>试玩编号</th><th>组别</th><th>阶段</th><th>投喂轮数</th><th>动物数量</th><th>AI来源</th><th>查看</th></tr></thead><tbody id="gameRows"></tbody></table></div><details><summary>游戏记录详情</summary><pre id="gameDetail">请选择一条游戏记录。</pre></details><p class="muted">JSON 保留逐轮食谱、AI回应、操作事件和独立测试答案；CSV 为每次试玩的摘要。真实API失败后使用的模拟回应会在记录中明确标识。</p></section>
+<details class="card" id="legacyData"><summary>旧报告任务数据（单独保留，不属于当前游戏）</summary><p>以下仅用于查看此前报告版本的历史记录及原有账号管理，不代表 Alien Zoo 已接入云端记录。</p>
+
 <section class="notice" id="connection" role="status">正在检查后端。未登录时不读取参与者数据。</section>
 <section class="card" id="authCard">
 <h2>研究者登录</h2><p>使用已被授权的 Supabase Auth 研究者账号。登录成功还需通过服务端名单验证。</p>
@@ -35,5 +38,6 @@
 </section>
 <section class="card"><h2>本地备份核对</h2><p>可导入原页面保存的 JSON 或参与者下载的备份。文件只在当前浏览器内处理，不上传；导入数据不代表云端已收件。切换来源或重新读取云端会替换当前视图。</p><label class="file-label">选择 JSON 文件<input id="importFile" type="file" accept="application/json,.json" multiple></label></section>
 <section class="card"><h2>数据字段与研究设计</h2><p>代理感 → 对本次任务形成的报告的心理所有权 → 学习获得感；脱机测试为独立作答的客观表现。以下展示原始题目与采集字段，不擅自新增合成量表分数或反向计分规则。</p><div id="dictionary"></div><details><summary>已连接数据库的实际列结构（登录后核对）</summary><pre id="actualSchema">尚未连接，无法核对数据库实际列结构。</pre></details></section>
+</details>
 </main><footer>研究数据请妥善保管 · 所有时间按浏览器本地时间显示</footer>
 </body></html>

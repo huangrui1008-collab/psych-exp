@@ -1,18 +1,20 @@
-# psych-exp
+# Alien Zoo · 研究者试玩 V0.6
 
-研究二实验项目，继续使用原 GitHub Pages 与 Supabase。
+当前主页面已更换为《严谨探讨研究课题》原对话下载的 Alien Zoo V0.6 游戏，以研究者先试玩、后改条目为目标，不使用旧报告任务作为当前实验。
 
-- [自动随机分组](https://huangrui1008-collab.github.io/psych-exp/)
-- [固定 A 组（依赖型）](https://huangrui1008-collab.github.io/psych-exp/?group=A)
-- [固定 B 组（增强型）](https://huangrui1008-collab.github.io/psych-exp/?group=B)
-- [研究者工作台](https://huangrui1008-collab.github.io/psych-exp/researcher.html)
+- 根链接随机分组：https://huangrui1008-collab.github.io/psych-exp/
+- 固定 A（AI先出食谱）：https://huangrui1008-collab.github.io/psych-exp/?group=A
+- 固定 B（自己先想再问AI）：https://huangrui1008-collab.github.io/psych-exp/?group=B
+- 研究者看板：https://huangrui1008-collab.github.io/psych-exp/researcher.html
 
-后端未完成设置时不可正式招募；详见 [安全后端设置](SETUP.md)。研究者工作台可登录查看云端状态、字段结构及导出数据；也可离线导入备份，但不会将其伪装成汇总数据。
+默认模拟AI，可直接开始。每组10轮投喂，之后有三段独立测试；题目、规则、植物与动物名称沿用下载的V0.6，主观量表仍未定稿。退出锁定与研究者重置均保留。每组在本浏览器分别保存，不相互覆盖。
 
-保留原任务、量表、填充题与10题脱机测试。心理所有权统一指向“本次任务形成的报告”。量表仅保留原始作答，不擅自增加总分、反向计分、材料或实验操作。历史 `experiment_data` 不改写，新过程记录保存在同项目侧表。
+游戏数据目前只保存在当前浏览器，可在游戏中导出完整JSON，在研究者看板查看、导入并导出JSON或CSV。它不是跨设备的云端参与者汇总。原Supabase中的旧报告数据与研究者账号机制保留，看板中独立折叠显示。
 
-`materials.js` 为参与者公开材料；`supabase/functions/_shared/materials.json` 为服务器权威材料（含原有答案键），测试核对二者一致性。变更研究材料需同时更新两处并版本化。公开仓库仍包含服务端源代码与答案键，故不能将题目保密或浏览器限制视为正式监考措施。
+可选真实AI：在游戏页顶部展开“连接真实AI”，使用已授权研究者账号登录，再在研究者设置中选择真实API并保存，开始新一遍。调用使用已配置的Supabase/DeepSeek后端，密钥不进网页。失败时沿用V0.6的明确模拟回退提示，实际回复来源写入每轮记录。
 
-云端数据查看和导出仅限已确认邮箱 `huangrui1008@gmail.com` 且列入服务器名单的账号。研究者下载服务与被试/AI服务分开；下载权限不代表匿名实验入口已经开通。
+源码来源和SHA-256见 `alien-zoo-source.json`。原对话ZIP中的HTML与单独下载的HTML已核对完全一致；公开的Q-3627试玩仓库是V0.5，未作为本版底稿。当前修改仅做原网址入口、研究者看板和安全AI代理适配，没有定稿新量表或新增正式实验材料。
 
-当前任务入口用于研究者本人试跑：先用同一研究者账号登录，再按原有九步流程体验真实 AI、填写报告和问卷、完成脱机测试并提交。根链接保持随机分组，A/B 链接保持固定组别。服务器对每个任务请求核验研究者身份及本次参与凭据，并写入 `record.is_test=true`、`record.test_label=researcher-self-test`；未登录访客不能开始、续传或调用 AI。研究者页将这类记录显示为“本人试跑”。需要在原 Supabase 项目配置新 AI 密钥；具体步骤见 SETUP.md。
+任务形式参考 Kuhl等（2023）Alien Zoo。原项目：https://github.com/ukuhl/IntroAlienZoo ，CC BY 4.0。当前预览规则并非原论文验证的正式实验程序。
+
+本地：`npm ci`、`npm test`、`python3 -m http.server 8765`。更多说明见 SETUP.md。

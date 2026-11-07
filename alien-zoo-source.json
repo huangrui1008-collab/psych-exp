@@ -1,0 +1,33 @@
+{
+  "zip_sha256": "4205f577706ae5678848721386bc1ed5a95202fa04a118b2304658adb707b8fa",
+  "html_sha256": "dfcfcd2d696bbb6346db513d0406958e052d2e3df34cec8d0486bced59e61180",
+  "zip_and_standalone_match": true,
+  "members": [
+    {
+      "name": "index.html",
+      "bytes": 29083
+    },
+    {
+      "name": "server.mjs",
+      "bytes": 4741
+    },
+    {
+      "name": "README.md",
+      "bytes": 2166
+    },
+    {
+      "name": ".env.example",
+      "bytes": 239
+    },
+    {
+      "name": ".gitignore",
+      "bytes": 19
+    }
+  ],
+  "adaptations": [
+    "原GitHub Pages入口与A/B链接适配",
+    "真实AI使用已有Supabase后端与研究者鉴权",
+    "游戏记录本地保留；量表未定稿"
+  ],
+  "version": "0.6.0"
+}
