@@ -15,7 +15,7 @@ export function memoryStore(){
 }
 export function fixture(options={}) {
   const store=memoryStore();
-  const handler=createHandler({store,materials,origins:['https://huangrui1008-collab.github.io'],auth:async token=>token==='good'?{id:'researcher',email:'huangrui1008@gmail.com',email_confirmed_at:'2026-11-06T00:00:00Z'}:token==='ordinary'?{id:'ordinary',email:'ordinary@example.test',email_confirmed_at:'2026-11-06T00:00:00Z'}:null,ai:async()=> '现有提示词生成的测试回复',ready:async()=>true,...options});
+  const handler=createHandler({store,materials,selfTestOnly:false,origins:['https://huangrui1008-collab.github.io'],auth:async token=>token==='good'?{id:'researcher',email:'huangrui1008@gmail.com',email_confirmed_at:'2026-11-06T00:00:00Z'}:token==='ordinary'?{id:'ordinary',email:'ordinary@example.test',email_confirmed_at:'2026-11-06T00:00:00Z'}:null,ai:async()=> '现有提示词生成的测试回复',ready:async()=>true,...options});
   const request=(path,body,token='',extras={})=>handler(new Request('https://backend.test/functions/v1/experiment-api'+path,{method:body?'POST':'GET',headers:{Origin:'https://huangrui1008-collab.github.io',...(token?{'X-Session-Token':token}:{}),...extras},...(body?{body:JSON.stringify(body)}:{})}));
   return {store,handler,request};
 }
