@@ -4,11 +4,20 @@
 
 ## 当前状态
 
-2026-11-07：GitHub Pages 已发布。原 Supabase 项目已从暂停状态恢复为 Healthy；完整数据库备份已保留在本机私有工作目录。已执行新增过程表、权限设置与指定邮箱授权绑定，复核历史表仍有1条记录、17个字段，新过程表为空，数据权限检查通过。研究者账号已创建并确认邮箱；页面已加入密码恢复流程，真实账号登录和下载仍须本人验收。
+2026-11-07：原 Supabase 项目已恢复为 Healthy；完整数据库备份保留在本机私有工作目录。原历史记录与17个字段保留，研究者账号的真实登录、完整云端读取及 CSV/JSON 下载已验收。当前新增目标是研究者本人完整试跑，任务入口采用同一研究者账号鉴权，试跑记录另存于原项目过程表并明确标记。
 
 仅授权 `huangrui1008@gmail.com` 查看、导出云端研究数据。研究者服务 `research-api` 独立于被试与 AI 服务，不要求配置 AI 密钥；它必须同时核验真实 Auth 会话、已确认邮箱和服务端账号名单。其他账号即使误入名单也不能访问。
 
-被试服务 `experiment-api` 继续保留平台 JWT 校验，在线招募和 AI 尚未开通。不要为启用数据下载而关闭被试服务的认证。研究者账号的密码由用户本人设置。[邮箱绑定设置](supabase/migrations/202611060002_owner_researcher.sql)会在该邮箱的真实账号创建且确认后自动绑定下载权限；其他邮箱不会获得权限，该账号改为其他邮箱时会撤销名单资格。
+本人试跑服务 `experiment-api` 在函数内验证真实 Auth 会话、已确认的指定邮箱及服务端名单；每次任务操作还需本次参与的随机凭据。部署此版本后，旧式平台 JWT 校验应关闭，以便真实登录令牌交给函数验证。未登录、其他账号和非试跑记录均拒绝访问，不开放匿名参与。研究者账号的密码由用户本人设置。[邮箱绑定设置](supabase/migrations/202611060002_owner_researcher.sql)会在该邮箱的真实账号创建且确认后自动绑定权限；该账号改为其他邮箱时会撤销名单资格。
+
+### 本人试跑
+
+1. 在原项目 Edge Functions → Secrets，由本人设置新密钥 `DEEPSEEK_API_KEY`。不要将密钥发到聊天或放入网页、仓库。
+2. 打开根链接或固定 A/B 链接，用研究者账号登录试跑，再阅读原有知情同意并开始。刷新后重新登录，可恢复同一标签页的试跑进度。
+3. 保留原报告、问卷和脱机测试要求。成功提交后可点击“开启新一遍试跑”，原云端记录保留。
+4. 研究者页能看到“本人试跑”状态；JSON/CSV 保留 `is_test` 和 `test_label`。试跑记录不能作为正式研究样本使用。
+
+服务器强制写入试跑标记，拒绝把原有未标记记录改为试跑记录。试跑登录令牌只放在内存，不保存密码或刷新令牌。网页与服务端保留原有材料和分组规则。
 
 ## 1. 保护现有数据与密钥
 
@@ -34,7 +43,7 @@
 ```sh
 supabase login
 supabase link --project-ref moryybvgocdtevhmaqyd
-supabase functions deploy experiment-api
+supabase functions deploy experiment-api --no-verify-jwt
 supabase functions deploy research-api --no-verify-jwt
 ```
 
@@ -43,12 +52,12 @@ supabase functions deploy research-api --no-verify-jwt
 | secret | 默认值 | 用途 |
 | --- | --- | --- |
 | ALLOWED_ORIGINS | https://huangrui1008-collab.github.io | 允许的网页来源；多个用逗号分开 |
-| DAILY_START_LIMIT | 1000 | 每 UTC 日最多新建参与记录 |
-| DAILY_CHAT_LIMIT | 500 | 每 UTC 日最多 AI 请求；失败请求也计入，防止成本失控 |
+| DAILY_START_LIMIT | 20 | 每 UTC 日最多新建本人试跑记录 |
+| DAILY_CHAT_LIMIT | 40 | 每 UTC 日最多 AI 请求；失败请求也计入 |
 
 每次参与最多40次 AI 请求、每条用户消息最多6000字符。达到服务限额时明确报错，不能用模拟回复替代实验操纵。AI 系统提示词、开场消息、任务和题目均来自原代码；API 使用原 `deepseek-chat`。服务端设置输出 token 上限作为成本边界（A 1600、B 700），B 组原有“每次回复不超过200字”提示保留。模型是否遵守引导方式仍需预实验检查，提示词不是绝对保证。
 
-`research-api` 关闭的仅是旧式平台 JWT 校验；函数内仍通过 Auth.getUser 验证真实会话，并强制核对已确认的 `huangrui1008@gmail.com` 和服务器账号名单。它没有被试开始、AI 或写入接口。`experiment-api` 当前保留平台校验，不因下载授权而对匿名访客开放。CORS 限制不能代替身份验证。
+两个函数均在内部通过 Auth.getUser 验证真实会话，并强制核对已确认的 `huangrui1008@gmail.com` 和服务器名单。`research-api` 只读；`experiment-api` 除公开的服务状态外，仅允许本人试跑操作，每次写入和 AI 调用还检查本次参与凭据。CORS 限制不能代替身份验证。
 
 `research-api/health` 仅检查数据权限设置，已返回 `ready:true`，不代表账号已创建或被试入口已开通。`experiment-api/health` 仅在私密 AI key 存在、迁移成功且保护表不向 anon/authenticated 授权时返回 `ready:true`。它不花费 AI 额度，也不能证明 AI key 有效；正式开始前仍需一次标记为测试的完整试跑。
 
@@ -76,7 +85,7 @@ on conflict (user_id) do nothing;
 ## 5. 验收与试跑
 
 1. 打开 `/functions/v1/experiment-api/health`，应返回 `ready:true`。
-2. 未登录请求 `/research/records` 应返回401；普通账号应返回403。
+2. 未登录请求 `/research/records` 或任何任务操作应返回401；其他账号应返回403。本人有效登录仍需正确的本次参与凭据。
 3. 使用 publishable key 请求数据表 REST 接口，均应拒绝读写；不能返回真实研究记录。
 4. 三个入口分别在独立标签页试跑：根链接随机 A/B，固定 A/B 保持指定组别。同一标签页刷新并点击恢复，编号、组别和已答内容保持。
 5. 检查 A 生成报告、B 引导写作；400字原门槛保留；写作后不能再通过本次参与接口请求 AI。
@@ -86,7 +95,7 @@ on conflict (user_id) do nothing;
 
 历史记录没有开始/退出状态，不回填、不猜测；本地备份不能证明云端收件。“进行中”只表示服务端没收到最终提交，不能判断是否在线或是否退出。拒绝知情同意者不建档。浏览器无法阻止参与者在别的设备/窗口查看外部资料，脱机测试是任务规则与界面隔离，不是监考软件。
 
-正式样本与试跑样本请按参与编号在研究管理记录中区分；本次没有向生产数据库插入测试记录或删除任何记录。
+本人试跑的数据在原项目侧表中以 `record.is_test=true` 标记；验收使用的试跑编号应另行记录。历史真实数据不删除、不覆盖。
 
 ## 本地检查
 

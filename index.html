@@ -332,6 +332,7 @@
     background: #fff;
     border-top: 1px solid #dfe2e6;
   }
+[hidden]{display:none!important}
 </style>
 </head>
 <body>
@@ -351,6 +352,15 @@
 </div>
 
 <div id="serviceNotice" role="status" style="padding:12px 24px;background:#fff4e5;line-height:1.7">正在核对研究服务连接…</div>
+<section id="trialAccess" style="max-width:900px;margin:16px auto;padding:20px;background:#fff;border:1px solid #dfe2e6;border-radius:10px">
+  <h2>研究者本人试跑</h2><p>用已授权研究者账号登录后，可完整体验原有任务。试跑记录自动标记为测试数据；刷新后需重新登录，再恢复本次进度。</p>
+  <form id="trialLoginForm" style="display:flex;gap:12px;flex-wrap:wrap;align-items:end">
+    <label>邮箱<br><input id="trialEmail" type="email" value="huangrui1008@gmail.com" readonly autocomplete="username" style="padding:10px;width:270px;max-width:100%"></label>
+    <label>密码<br><input id="trialPassword" type="password" required autocomplete="current-password" style="padding:10px;max-width:100%"></label>
+    <button id="trialLoginBtn" type="submit" class="next-btn">登录试跑</button>
+  </form><p id="trialAuthMessage" role="status" aria-live="polite"></p>
+  <a href="researcher.html">忘记密码 / 研究者数据页面</a>
+</section>
 <div id="app">
 
   <!-- 知情同意页（不计入9步进度条） -->
@@ -431,6 +441,7 @@
     <div class="done-screen">
       <h2>感谢您的参与</h2>
       <p id="submissionReceipt" role="status"></p>
+      <button id="newTrialBtn" class="next-btn" hidden>开启新一遍试跑</button>
       <p>再次感谢您的参与！由于研究设计需要，本次任务中AI的具体角色设定因人而异。如果您身边有同学未来也可能参与本研究，恳请您不要与他们讨论实验的具体内容，以免影响研究结果的准确性。如对本研究有任何疑问，欢迎联系研究团队：W25091100485@cityu.edu.mo。</p>
     </div>
   </section>
@@ -443,6 +454,6 @@
 
 <script src="config.js" defer></script>
 <script src="materials.js" defer></script>
-<script src="experiment.js" defer></script>
+<script src="experiment.js?v=20261107-selftest" defer></script>
 </body>
 </html>

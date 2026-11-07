@@ -18,7 +18,7 @@ let operation = 0;
 const phases = ['前测','报告与 AI 对话','操纵检验','代理感','填充任务','报告心理所有权','学习获得感','脱机测试','自估正确率'];
 const groupLabel = g => g === 'A' ? 'A · 依赖型' : g === 'B' ? 'B · 增强型' : '未记录';
 const dateText = x => x && !Number.isNaN(Date.parse(x)) ? new Date(x).toLocaleString() : '未记录';
-const statusLabel = r => r.status==='completed' ? '已完成（服务端确认）' : r.status==='in_progress' ? '进行中 · '+(phases[r.current_step]||'阶段未知') : r.status==='legacy' ? '历史提交 · 过程状态未知' : '本地备份 · 云端收件未验证';
+const statusLabel = r => (r.data?.is_test?'本人试跑 · ':'')+(r.status==='completed' ? '已完成（服务端确认）' : r.status==='in_progress' ? '进行中 · '+(phases[r.current_step]||'阶段未知') : r.status==='legacy' ? '历史提交 · 过程状态未知' : '本地备份 · 云端收件未验证');
 function normalize(row, source) {
   if (source==='current') return {...row, source, group_name:row.group_name, data:row.record||{}};
   return {source,status:source==='legacy'?'legacy':'local',pid:row.pid||'未记录',group_name:row.group_name||row.group,entry_mode:row.entry_mode||'',created_at:row.started_at||'',updated_at:row.timestamp||'',data:row};
@@ -191,7 +191,7 @@ $('importFile').addEventListener('change',async e=>{
   finally {e.target.value='';}
 });
 function dictionary() {
-  const fields=[['pid / group_name / entry_mode','匿名参与编号、组别、随机或固定分配'],['status / current_step / created_at / updated_at / completed_at','同意参与后建档、阶段、服务端开始/保存/完成时间'],['essay / chatHistory','任务形成的报告与 AI 对话原始记录'],['duration / timestamp / step_times','总时长（秒）、最终提交时间、浏览器阶段进入时间（未经服务器验证）'],['offline_test_responses / offline_test_score','10题原始选项与服务端计算正确数（0–10）；未完成时不计分'],['self_estimate','原有四档自估正确数'],['schema_version','study2-report-v2；历史记录可能缺失']];
+  const fields=[['pid / group_name / entry_mode','匿名参与编号、组别、随机或固定分配'],['status / current_step / created_at / updated_at / completed_at','同意参与后建档、阶段、服务端开始/保存/完成时间'],['essay / chatHistory','任务形成的报告与 AI 对话原始记录'],['duration / timestamp / step_times','总时长（秒）、最终提交时间、浏览器阶段进入时间（未经服务器验证）'],['offline_test_responses / offline_test_score','10题原始选项与服务端计算正确数（0–10）；未完成时不计分'],['self_estimate','原有四档自估正确数'],['is_test / test_label','本人试跑标记；这类记录用于程序验收，不能混入正式样本'],['schema_version','study2-report-v2；历史记录可能缺失']];
   const table=document.createElement('table');
   for(const [key,desc]of fields){const tr=document.createElement('tr');for(const value of [key,desc]){const td=document.createElement('td');td.textContent=value;tr.appendChild(td);}table.appendChild(tr);}$('dictionary').appendChild(table);
   for(const [name,cfg]of [['前测',SNAIL_CFG],['操纵检验',HOU_CFG],['代理感',SOA_CFG],['报告心理所有权',PO_CFG],['学习获得感',CAP_CFG],['脱机测试',{key:'offline_test_responses',questions:OFFLINE_TEST_QUESTIONS}],['填充任务',{key:'filler_responses',questions:FILLER_QUESTIONS}]]) {

@@ -19,7 +19,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const rawGroup = (urlParams.get("group") || "").toUpperCase();
 const validGroup = !urlParams.has("group") || rawGroup === "A" || rawGroup === "B";
 const entryMode = urlParams.has("group") ? "fixed" : "random";
-const sessionKey = "psychExpSession_v2_" + (entryMode === "fixed" ? rawGroup : "auto");
+const sessionKey = "psychExpTrialSession_v1_" + (entryMode === "fixed" ? rawGroup : "auto");
 let session = null;
 try { session = JSON.parse(sessionStorage.getItem(sessionKey) || "null"); } catch {}
 if (!session || !session.pid || !/^[0-9a-f]{64}$/.test(session.token || "")) {
@@ -68,6 +68,9 @@ function initExperiment() {
   let saving = Promise.resolve();
   let saveTimer;
   let storageFailed = false;
+  let ownerAccessToken = '';
+  let trialRequired = true;
+  let serviceReady = false;
   const notice = document.getElementById("serviceNotice");
   const agreeBtn = document.getElementById("agreeBtn");
   const backupKey = "psychExpData_v2_" + pid;
@@ -94,12 +97,19 @@ function initExperiment() {
     const response = await fetch(APP_CONFIG.API_BASE + path, {
       method: body ? "POST" : "GET",
       signal: AbortSignal.timeout(75000),
-      headers: { "Content-Type": "application/json", "apikey": APP_CONFIG.SUPABASE_KEY, "X-Session-Token": session.token },
+      headers: { "Content-Type": "application/json", "apikey": APP_CONFIG.SUPABASE_KEY, "X-Session-Token": session.token, ...(ownerAccessToken ? {Authorization:'Bearer '+ownerAccessToken} : {}) },
       ...(body ? { body: JSON.stringify({ ...body, pid }) } : {})
     });
     let data;
     try { data = await response.json(); } catch { throw new Error("研究服务未返回有效响应"); }
-    if (!response.ok) throw new Error(data.error || "研究服务暂不可用");
+    if (!response.ok) {
+      if (response.status===401 && trialRequired) {
+        ownerAccessToken='';agreeBtn.disabled=true;
+        document.getElementById('trialLoginForm').hidden=false;
+        document.getElementById('trialAuthMessage').textContent='试跑登录已失效，请重新登录后继续。已有云端进度和本地备份保留。';
+      }
+      throw new Error(data.error || "研究服务暂不可用");
+    }
     return data;
   }
   async function syncTo(target, record) {
@@ -128,16 +138,43 @@ function initExperiment() {
     try {
       const r = await fetch(APP_CONFIG.API_BASE + "/health", { headers: { apikey: APP_CONFIG.SUPABASE_KEY }, signal: AbortSignal.timeout(12000) });
       const data = await r.json();
+      if (!notice.isConnected) return;
       if (!r.ok || !data.ready) throw new Error();
-      notice.textContent = "研究服务连接正常。请阅读知情同意书后开始。";
-      agreeBtn.disabled = false;
+      serviceReady = true;
+      trialRequired = data.mode !== 'study';
+      document.getElementById('trialAccess').hidden = !trialRequired;
+      notice.textContent = trialRequired ? (ownerAccessToken ? '本人试跑服务已连接。请阅读知情同意书后开始。' : '本人试跑服务已连接，请先登录研究者账号。') : '研究服务连接正常。请阅读知情同意书后开始。';
+      agreeBtn.disabled = trialRequired && !ownerAccessToken;
     } catch {
+      if (!notice.isConnected) return;
+      serviceReady = false;
       notice.replaceChildren(document.createTextNode("研究服务尚未接通，暂不能开始或恢复任务。请联系研究者，或重试连接。 "));
       const retry = document.createElement("button"); retry.textContent = "重试连接";
       retry.addEventListener("click", checkHealth); notice.appendChild(retry);
       agreeBtn.disabled = true;
     }
   }
+  document.getElementById('trialLoginForm').addEventListener('submit',async e=>{
+    e.preventDefault();ownerAccessToken='';agreeBtn.disabled=true;
+    const btn=document.getElementById('trialLoginBtn'),message=document.getElementById('trialAuthMessage');
+    btn.disabled=true;message.textContent='正在验证研究者身份…';
+    try {
+      const r=await fetch(APP_CONFIG.SUPABASE_URL+'/auth/v1/token?grant_type=password',{method:'POST',signal:AbortSignal.timeout(20000),headers:{'Content-Type':'application/json',apikey:APP_CONFIG.SUPABASE_KEY},body:JSON.stringify({email:'huangrui1008@gmail.com',password:document.getElementById('trialPassword').value})});
+      const data=await r.json();if(!r.ok)throw new Error(data.error_description||data.msg||data.error||'登录失败');
+      ownerAccessToken=data.access_token;
+      await api('/self-test/access');
+      document.getElementById('trialPassword').value='';
+      document.getElementById('trialLoginForm').hidden=true;
+      message.textContent='研究者身份已验证，本次记录将标记为本人试跑。';
+      await checkHealth();
+    } catch(error) {
+      ownerAccessToken='';document.getElementById('trialPassword').value='';
+      message.textContent='试跑登录失败：'+(/Invalid login credentials/i.test(error.message)?'邮箱或密码未通过验证，请使用研究者账号密码。':error.message);
+    } finally {btn.disabled=false;}
+  });
+  document.getElementById('newTrialBtn').addEventListener('click',()=>{
+    sessionStorage.removeItem(sessionKey);location.reload();
+  });
   checkHealth();
   const progressFill = document.getElementById("progressFill");
   const stepLabel = document.getElementById("stepLabel");
@@ -554,6 +591,7 @@ function initExperiment() {
       localSave();
       document.getElementById("submissionReceipt").textContent = "数据已成功上传。参与编号：" + pid;
       notice.textContent = "本次参与已完成，研究服务已确认收件。";
+      document.getElementById('newTrialBtn').hidden = !trialRequired;
       goToStep("done");
     } catch (err) {
       notice.textContent = "尚未提交成功：" + err.message + "。请保持页面打开，点击重试提交；也可下载备份交给研究者。";
@@ -580,11 +618,13 @@ function initExperiment() {
 
   // ---------- 知情同意页交互 ----------
   agreeBtn.addEventListener("click", async function () {
+    if (!serviceReady || (trialRequired && !ownerAccessToken)) return;
     agreeBtn.disabled = true; agreeBtn.textContent = "正在连接…";
     try {
       const remote = await api("/start", { entry_mode: entryMode, group: rawGroup });
       group = remote.group; session.group = group;
       experimentData.group = group;
+      if (trialRequired) {experimentData.is_test=true;experimentData.test_label='researcher-self-test';}
       // A server checkpoint is used when this tab has no newer local draft.
       if ((!localRecord || remote.current_step > Number(localRecord.current_step || 0) || remote.status === "completed") && remote.record && Object.keys(remote.record).length) {
         for (const [key, value] of Object.entries(remote.record)) {
@@ -613,6 +653,7 @@ function initExperiment() {
       }
       document.getElementById("topBar").style.display = "block";
       if (session.completed) {
+        document.getElementById('newTrialBtn').hidden = !trialRequired;
         notice.textContent = "本次参与的数据已成功上传。";
         document.getElementById("submissionReceipt").textContent = "数据已成功上传。参与编号：" + pid;
         goToStep("done");
