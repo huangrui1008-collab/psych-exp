@@ -33,9 +33,10 @@ const store = {
 };
 const handler=createHandler({
   store, materials,
+  selfTestOnly:true,
   origins:(Deno.env.get('ALLOWED_ORIGINS')||'https://huangrui1008-collab.github.io').split(',').map(x=>x.trim()).filter(Boolean),
-  dailyStarts:Number(Deno.env.get('DAILY_START_LIMIT')||1000),
-  dailyChats:Number(Deno.env.get('DAILY_CHAT_LIMIT')||500),
+  dailyStarts:Number(Deno.env.get('DAILY_START_LIMIT')||20),
+  dailyChats:Number(Deno.env.get('DAILY_CHAT_LIMIT')||40),
   async ready() { return !!Deno.env.get('DEEPSEEK_API_KEY') && checked(await db.rpc('study2_backend_ready'))===true; },
   async auth(jwt: string) { const {data,error}=await db.auth.getUser(jwt); return error?null:data.user; },
   async ai(messages: any[], group: string) {

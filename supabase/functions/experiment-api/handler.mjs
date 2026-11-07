@@ -44,20 +44,31 @@ export function validateRecord(input, step, m, complete = false) {
   }
   return result;
 }
-export function createHandler({store, materials:m, auth, ai, ready, origins, dailyStarts=1000, dailyChats=500}) {
+export function createHandler({store, materials:m, auth, ai, ready, origins, dailyStarts=1000, dailyChats=500, selfTestOnly=true}) {
   return async req => {
     const origin=req.headers.get('Origin');
     const cors={'Vary':'Origin','Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization, apikey, X-Session-Token','Access-Control-Max-Age':'600','Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'};
     if (origin && !origins.includes(origin)) return new Response(JSON.stringify({error:'来源未获允许'}),{status:403,headers:cors});
     if (origin) cors['Access-Control-Allow-Origin']=origin;
     const response=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:cors});
+    const requireOwner=async()=>{
+      const jwt=req.headers.get('Authorization')?.replace(/^Bearer /,'');
+      const user=jwt ? await auth(jwt) : null;
+      if (!user) fail(401,'请先登录研究者账号进行本人试跑');
+      if (user.email?.trim().toLowerCase() !== 'huangrui1008@gmail.com' || !user.email_confirmed_at || !await store.isResearcher(user.id)) fail(403,'仅已授权研究者可以试跑');
+      return user;
+    };
     try {
       if (req.method==='OPTIONS') return new Response(null,{status:204,headers:cors});
       const route=new URL(req.url).pathname.split('/experiment-api')[1] || '/';
       const u=new URL(req.url);
       if (route==='/health' && req.method==='GET') {
         if (!await ready()) fail(503,'研究服务尚未完成安全设置');
-        return response({ready:true,version:'study2-report-v2'});
+        return response({ready:true,version:'study2-report-v2',mode:selfTestOnly?'researcher-self-test':'study'});
+      }
+      if (route==='/self-test/access' && req.method==='GET') {
+        if (!selfTestOnly) fail(404,'接口不存在');
+        await requireOwner();return response({authorized:true,mode:'researcher-self-test'});
       }
       if (route.startsWith('/research/')) {
         const jwt=req.headers.get('Authorization')?.replace(/^Bearer /,'');
@@ -75,6 +86,7 @@ export function createHandler({store, materials:m, auth, ai, ready, origins, dai
         return response({rows:rows.slice(0,200),has_more:rows.length>200,source,offset});
       }
       if (req.method!=='POST') fail(405,'方法不受支持');
+      if (selfTestOnly) await requireOwner();
       if (Number(req.headers.get('content-length')||0)>250000) fail(413,'记录过大');
       const bodyText=await req.text(); if (bodyText.length>250000) fail(413,'记录过大');
       let b; try { b=JSON.parse(bodyText); } catch { fail(400,'请求格式无效'); }
@@ -83,6 +95,7 @@ export function createHandler({store, materials:m, auth, ai, ready, origins, dai
       if (!tokenPattern.test(token)) fail(401,'本次参与凭据无效');
       const hash=await hashToken(token);
       let session=await store.get(b.pid);
+      if (selfTestOnly && session && session.record?.is_test!==true) fail(403,'该记录不属于本人试跑，请保留原记录并开启新的试跑');
       if (route==='/start') {
         if (session && session.token_hash!==hash) fail(403,'参与凭据不匹配');
         if (!session) {
@@ -90,7 +103,7 @@ export function createHandler({store, materials:m, auth, ai, ready, origins, dai
           if (!['random','fixed'].includes(b.entry_mode) || (b.entry_mode==='fixed'&&!['A','B'].includes(b.group))) fail(400,'分组入口无效');
           if (!await store.quota('start',dailyStarts)) fail(429,'今日参与名额已达服务上限，请联系研究者');
           const group=b.entry_mode==='fixed'?b.group:(crypto.getRandomValues(new Uint32Array(1))[0]<2147483648?'A':'B');
-          session=await store.create({pid:b.pid,token_hash:hash,group_name:group,entry_mode:b.entry_mode,current_step:0,chat_history:[{role:'system',content:m.CONFIG.SYSTEM_PROMPT[group]},{role:'assistant',content:m.CONFIG.FIRST_MESSAGE[group]}]});
+          session=await store.create({pid:b.pid,token_hash:hash,group_name:group,entry_mode:b.entry_mode,current_step:0,...(selfTestOnly?{record:{is_test:true,test_label:'researcher-self-test'}}:{}),chat_history:[{role:'system',content:m.CONFIG.SYSTEM_PROMPT[group]},{role:'assistant',content:m.CONFIG.FIRST_MESSAGE[group]}]});
           if (session.token_hash!==hash) fail(403,'参与凭据不匹配');
         }
         return response({pid:session.pid,group:session.group_name,status:session.status,current_step:session.current_step,record:session.record,chat_history:session.chat_history.filter(x=>x.role!=='system')});
@@ -104,6 +117,7 @@ export function createHandler({store, materials:m, auth, ai, ready, origins, dai
         if (!Number.isInteger(step)||step<session.current_step||step>8||step>session.current_step+1 || (complete&&session.current_step!==8)) fail(409,'步骤顺序不一致，请刷新页面恢复');
         if (session.ai_busy_since && Date.now()-Date.parse(session.ai_busy_since)<90000) fail(409,'请等待 AI 回复后再继续');
         const record=validateRecord(b.record,step,m,complete);
+        if (selfTestOnly) {record.is_test=true;record.test_label='researcher-self-test';}
         const now=new Date().toISOString();
         record.pid=session.pid; record.group=session.group_name;
         record.chatHistory=session.chat_history;
