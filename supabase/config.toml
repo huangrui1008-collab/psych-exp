@@ -1,7 +1,8 @@
 [functions.experiment-api]
-# Participant enrollment remains gated until separately authorized.
-# Research data downloads use the independent research-api service below.
-verify_jwt = true
+# Owner-only self-test: every participant request requires a real, confirmed
+# owner Auth session and allowlist membership inside the function, plus its
+# own session capability. No anonymous starts or AI calls are accepted.
+verify_jwt = false
 
 [functions.research-api]
 # This read-only service validates Auth.getUser, confirmed owner email and UUID
