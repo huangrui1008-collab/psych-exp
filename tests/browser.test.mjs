@@ -1,90 +1,57 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
-import {browser,fixture,fetchHandler,settle,tick,materials} from './helpers.mjs';
-function answer(b,step,choose){const section=b.document.getElementById('step-'+step);const names=[...new Set([...section.querySelectorAll('input[type=radio]')].map(x=>x.name))];for(const name of names){const inputs=[...section.querySelectorAll('input')].filter(x=>x.name===name);const input=choose?choose(inputs,name):inputs[0];input.checked=true;input.dispatchEvent(new b.w.Event('change',{bubbles:true}));}}
-function next(b,step){b.document.querySelector('#step-'+step+' .next-btn').click();}
-async function begin(b){await settle(()=>!b.document.getElementById('agreeBtn').disabled);b.document.getElementById('agreeBtn').click();await settle(()=>b.document.getElementById('step-0').classList.contains('active'));}
-test('public materials preserve original items and keep scoring key on server',()=>{
- const js=fs.readFileSync(new URL('../materials.js',import.meta.url),'utf8');assert.ok(!/sk-[a-zA-Z0-9]{20}/.test(js));assert.ok(!js.includes('"correct"'));
- assert.equal(materials.PO_CFG.questions.length,3);for(const q of materials.PO_CFG.questions)assert.ok(q.text.includes('本次任务形成的这篇报告'));
-});
-test('all three participant entry points start correctly; invalid params and declined consent create no record',async()=>{
- for(const suffix of ['', '?group=A','?group=B']){
-  const f=fixture();const b=browser('index',fetchHandler(f.handler),{url:'https://huangrui1008-collab.github.io/psych-exp/'+suffix});try{
-   assert.equal(f.store.sessions.size,0);await begin(b);const row=[...f.store.sessions.values()][0];assert.ok(['A','B'].includes(row.group_name));if(suffix)assert.equal(row.group_name,suffix.at(-1));assert.deepEqual(b.errors,[]);
+import test from 'node:test';import assert from 'node:assert/strict';
+import {browser,fixture,settle,tick} from './helpers.mjs';
+const noNetwork=async()=>{throw Error('offline');};
+function press(b,action){[...b.document.querySelectorAll('[data-do="'+action+'"]')].find(x=>!x.closest('.group')?.hidden).click();}
+function game(b){return JSON.parse(b.w.localStorage.getItem('az-preview-v06-session-'+(new URL(b.w.location).searchParams.get('group')||'random')));}
+async function completeGame(b){
+ press(b,'start');
+ for(let round=0;round<10;round++){
+  if(game(b).mode==='augmentation')press(b,'ask');
+  await settle(()=>b.document.getElementById('aiAck'));
+  assert.equal(b.document.querySelector('[data-do=feed]').disabled,true);
+  const ack=b.document.getElementById('aiAck');ack.checked=true;ack.dispatchEvent(new b.w.Event('change',{bubbles:true}));press(b,'feed');press(b,'next');
+ }
+ assert.equal(game(b).stage,'test');assert.equal(b.document.querySelector('.ai'),null);assert.equal(b.document.querySelector('.table-recipes'),null);
+ for(let phase=0;phase<3;phase++){
+  const form=b.document.getElementById('testForm');
+  for(const name of new Set([...form.querySelectorAll('input[type=radio]')].map(x=>x.name)))form.querySelector('input[name="'+name+'"]').checked=true;
+  for(const select of form.querySelectorAll('select'))select.selectedIndex=1;
+  form.dispatchEvent(new b.w.Event('submit',{cancelable:true}));
+ }
+ assert.equal(game(b).stage,'done');assert.equal(game(b).rounds.length,10);assert.equal(game(b).is_test,true);
+ assert.match(b.document.getElementById('app').textContent,/正式量表尚未确定/);
+ press(b,'export');assert.equal(b.captures.length,1);assert.deepEqual(b.errors,[]);
+}
+test('correct V0.6 game replaces the report; A/B finish all rounds and tests, preserve separate local records',async()=>{
+ const states={};for(const group of ['A','B']){
+  const b=browser('index',noNetwork,{url:'https://huangrui1008-collab.github.io/psych-exp/?group='+group,local:states});try{
+   assert.match(b.document.body.textContent,/Alien Zoo.*V0.6/);assert.ok(!b.document.body.textContent.includes('宜家'));assert.equal([...b.document.querySelectorAll('[data-do=start]')].filter(x=>!x.closest('.group')?.hidden).length,1);
+   await completeGame(b);assert.equal(game(b).mode,group==='A'?'delegation':'augmentation');Object.assign(states,Object.fromEntries(Object.entries(b.w.localStorage)));
   }finally{b.close();}
  }
- for(const suffix of ['?group=C','?group=','?group=A']){
-  const f=fixture();const b=browser('index',fetchHandler(f.handler),{url:'https://huangrui1008-collab.github.io/psych-exp/'+suffix});try{
-   if(suffix==='?group=A')b.document.getElementById('declineBtn').click();else assert.equal(b.document.getElementById('groupErrorScreen').style.display,'flex');
-   assert.equal(f.store.sessions.size,0);
-  }finally{b.close();}
- }
+ assert.ok(states['az-preview-v06-session-A']);assert.ok(states['az-preview-v06-session-B']);
+ const dashboard=browser('researcher',noNetwork,{local:states});try{await tick();assert.match(dashboard.document.getElementById('gameScope').textContent,/2 次试玩/);assert.equal(dashboard.document.querySelectorAll('#gameRows tr').length,2);assert.equal(dashboard.document.getElementById('legacyData').open,false);dashboard.document.getElementById('gameExportJson').click();dashboard.document.getElementById('gameExportCsv').click();assert.equal(dashboard.captures.length,2);assert.deepEqual(dashboard.errors,[]);}finally{dashboard.close();}
 });
-test('full nine-step run, upload failure, local backup, retry, stable refresh and server score',async()=>{
- const f=fixture();let failCompletion=true;
- const fetcher=async(url,init)=>String(url).endsWith('/complete')&&failCompletion?new Response(JSON.stringify({error:'模拟断网'}),{status:503}):fetchHandler(f.handler)(url,init);
- const b=browser('index',fetcher,{url:'https://huangrui1008-collab.github.io/psych-exp/?group=B'});
- let session,local;
+test('root entry randomly assigns both modes; invalid group creates no game; exit locks and researcher can reset',async()=>{
+ const modes=new Set();for(let i=0;i<24;i++){const b=browser('index',noNetwork);try{press(b,'start');modes.add(game(b).mode);}finally{b.close();}}assert.equal(modes.size,2);
+ const invalid=browser('index',noNetwork,{url:'https://huangrui1008-collab.github.io/psych-exp/?group=C'});try{assert.match(invalid.document.body.textContent,/分组链接无效/);assert.equal(invalid.w.localStorage.length,0);}finally{invalid.close();}
+ const b=browser('index',noNetwork,{url:'https://huangrui1008-collab.github.io/psych-exp/?group=B'});try{press(b,'start');press(b,'exit');assert.equal(game(b).stage,'exited');assert.match(b.document.body.textContent,/本次试玩已锁定/);press(b,'reset');assert.equal(game(b),null);assert.match(b.document.body.textContent,/任务说明/);assert.deepEqual(b.errors,[]);}finally{b.close();}
+});
+test('real game AI uses only configured backend with memory-only owner login; fallback is explicit',async()=>{
+ const calls=[];let fail=false;const b=browser('index',async(url,init={})=>{calls.push([String(url),init]);if(String(url).includes('/token?'))return new Response(JSON.stringify({access_token:'test-owner-token'}));if(String(url).endsWith('/self-test/access'))return new Response('{}');if(fail)return new Response('{}',{status:503});return new Response(JSON.stringify({kind:'plan',text:'来自真实接口的测试回应',recipe:[1,2,3,2,1]}));},{url:'https://huangrui1008-collab.github.io/psych-exp/?group=A'});
  try{
-  await begin(b);answer(b,0);next(b,0);await tick();
-  b.document.getElementById('chatInput').value='请引导我思考';b.document.getElementById('sendBtn').click();await settle(()=>b.document.querySelectorAll('.msg').length===3);
-  b.document.getElementById('essayText').value='报'.repeat(399);b.document.getElementById('essayText').dispatchEvent(new b.w.Event('input'));assert.equal(b.document.getElementById('submitBtn').disabled,true);
-  b.document.getElementById('essayText').value='报'.repeat(400);b.document.getElementById('essayText').dispatchEvent(new b.w.Event('input'));b.document.getElementById('submitBtn').click();
-  for(const step of [2,3,4,5,6]){answer(b,step);next(b,step);}
-  answer(b,7,(inputs,name)=>inputs.find(x=>x.value===materials.OFFLINE_TEST_QUESTIONS.find(q=>name.endsWith('_'+q.id)).correct));next(b,7);answer(b,8);next(b,8);
-  await settle(()=>b.document.querySelector('#step-8 .next-btn').textContent==='重试提交');assert.equal(b.document.getElementById('step-done').classList.contains('active'),false);assert.ok(b.document.getElementById('downloadBackup'));
-  assert.equal([...f.store.sessions.values()][0].status,'in_progress');
-  failCompletion=false;next(b,8);await settle(()=>b.document.getElementById('step-done').classList.contains('active'));
-  const row=[...f.store.sessions.values()][0];assert.equal(row.record.offline_test_score,10);assert.equal(row.status,'completed');assert.equal(row.group_name,'B');assert.equal(row.record.po_responses.q1,1);assert.equal(row.record.chatHistory.length,4);
-  session=Object.fromEntries(Object.entries(b.w.sessionStorage));local=Object.fromEntries(Object.entries(b.w.localStorage));assert.deepEqual(b.errors,[]);
- }finally{b.close();}
- const resumed=browser('index',fetcher,{url:'https://huangrui1008-collab.github.io/psych-exp/?group=B',session,local});try{
-  await settle(()=>!resumed.document.getElementById('agreeBtn').disabled);resumed.document.getElementById('agreeBtn').click();await settle(()=>resumed.document.getElementById('step-done').classList.contains('active'));assert.equal(f.store.sessions.size,1);assert.deepEqual(resumed.errors,[]);
- }finally{resumed.close();}
-});
-test('backend unavailable blocks enrollment and researcher does not invent statistics',async()=>{
- const fetcher=async()=>{throw new Error('offline');};
- for(const page of ['index','researcher']){const b=browser(page,fetcher);try{await tick();if(page==='index'){assert.equal(b.document.getElementById('agreeBtn').disabled,true);assert.match(b.document.getElementById('serviceNotice').textContent,/尚未接通/);}else{assert.equal(b.document.getElementById('metrics').hidden,true);assert.equal(b.document.getElementById('exportCsv').disabled,true);assert.match(b.document.getElementById('scope').textContent,/尚未读取/);}assert.deepEqual(b.errors,[]);}finally{b.close();}}
-});
-test('researcher login, 401/403, pagination, safe rendering, filters, CSV and logout',async()=>{
- let pages=0;const list=Array.from({length:401},(_,i)=>({source:'current',pid:'participant-'+i,group_name:i%2?'B':'A',status:i%2?'in_progress':'completed',current_step:8,record:{pid:'participant-'+i,essay:i?'report':'<img src=x onerror=alert(1)>',snail_responses:{q1:7}},created_at:'2026-11-06T00:00:00Z'}));
- const fetcher=async(url,init)=>{
-  const path=String(url);if(path.includes('/token?'))return new Response(JSON.stringify({access_token:'good'}));
-  if(path.includes('/research/records')){pages++;if(path.includes('legacy'))return new Response(JSON.stringify({rows:[],has_more:false}));const offset=Number(new URL(path).searchParams.get('offset'));return new Response(JSON.stringify({rows:list.slice(offset,offset+200),has_more:offset+200<list.length}));}
-  if(path.includes('/research/schema'))return new Response(JSON.stringify([{column_name:'record'}]));return new Response(JSON.stringify({ready:true}));
- };
- const b=browser('researcher',fetcher);try{
-  b.document.getElementById('email').value='test@example.test';b.document.getElementById('password').value='not-a-real-password';b.document.getElementById('loginForm').dispatchEvent(new b.w.Event('submit',{cancelable:true}));
-  await settle(()=>!b.document.getElementById('metrics').hidden);assert.equal(pages,4);assert.equal(b.document.querySelectorAll('#rows tr').length,401);assert.equal(b.document.querySelectorAll('#rows img').length,0);assert.equal(b.document.getElementById('password').value,'');
-  b.document.getElementById('groupFilter').value='B';b.document.getElementById('groupFilter').dispatchEvent(new b.w.Event('change'));assert.equal(b.document.querySelectorAll('#rows tr').length,200);
-  b.document.getElementById('exportCsv').click();assert.equal(b.captures.length,1);const csv=await new Promise(resolve=>{const r=new b.w.FileReader();r.onload=()=>resolve(r.result);r.readAsText(b.captures[0]);});assert.ok(csv.includes('snail_responses.q1'));assert.equal(csv.split('\r\n').length,201);
-  b.document.getElementById('logout').click();assert.equal(b.document.getElementById('metrics').hidden,true);assert.equal(b.document.getElementById('exportCsv').disabled,true);assert.equal(b.document.getElementById('detail').textContent,'');assert.deepEqual(b.errors,[]);
+  b.document.getElementById('gamePassword').value='not-real-password';b.document.getElementById('gameLoginForm').dispatchEvent(new b.w.Event('submit',{cancelable:true}));await settle(()=>b.document.getElementById('gameAuthMessage').textContent.includes('身份已验证'));
+  b.document.getElementById('setAI').value='real';press(b,'save-settings');press(b,'start');await settle(()=>game(b).ai?.source==='real');const call=calls.find(([u])=>u.endsWith('/api/ai'));assert.ok(call[0].startsWith('https://moryybvgocdtevhmaqyd.supabase.co/'));assert.equal(call[1].headers.Authorization,'Bearer test-owner-token');assert.equal(b.document.getElementById('gamePassword').value,'');assert.ok(!JSON.stringify(Object.fromEntries(Object.entries(b.w.localStorage))).includes('test-owner-token'));
+  const ack=b.document.getElementById('aiAck');ack.checked=true;ack.dispatchEvent(new b.w.Event('change',{bubbles:true}));press(b,'feed');fail=true;press(b,'next');await settle(()=>game(b).ai?.source==='mock');assert.match(b.document.querySelector('.ai').textContent,/已切换模拟回复/);assert.deepEqual(b.errors,[]);
  }finally{b.close();}
 });
-test('resume from server without local draft restores answer objects used by validation',async()=>{
- const f=fixture();const b=browser('index',fetchHandler(f.handler));let session;
- try{await begin(b);answer(b,0);next(b,0);await settle(()=>[...f.store.sessions.values()][0].current_step===1);session=Object.fromEntries(Object.entries(b.w.sessionStorage));}finally{b.close();}
- const resumed=browser('index',fetchHandler(f.handler),{session});try{
-  await settle(()=>!resumed.document.getElementById('agreeBtn').disabled);resumed.document.getElementById('agreeBtn').click();await settle(()=>resumed.document.getElementById('step-1').classList.contains('active'));
-  assert.equal(resumed.document.querySelector('input[name="snail_responses_q1"]:checked').value,'1');
-  resumed.document.getElementById('essayText').value='报'.repeat(400);resumed.document.getElementById('essayText').dispatchEvent(new resumed.w.Event('input'));resumed.document.getElementById('submitBtn').click();await settle(()=>[...f.store.sessions.values()][0].current_step===2);assert.deepEqual(resumed.errors,[]);
- }finally{resumed.close();}
-});
-test('local import stays local, deduplicates files and does not claim cloud counts',async()=>{
- let requests=0;const b=browser('researcher',async()=>{requests++;throw new Error('offline');});try{
-  await tick();const input=b.document.getElementById('importFile');const data={pid:'local-pid',group:'A',essay:'=HYPERLINK("https://example.test")',snail_responses:{q1:4}};
-  Object.defineProperty(input,'files',{value:[{size:100,text:async()=>JSON.stringify(data)},{size:100,text:async()=>JSON.stringify(data)}]});input.dispatchEvent(new b.w.Event('change'));await settle(()=>!b.document.getElementById('metrics').hidden);
-  assert.equal(requests,1);assert.match(b.document.getElementById('scope').textContent,/仅本地导入 · 1 条/);assert.ok(!b.document.getElementById('metrics').textContent.includes('当前流程'));
-  b.document.getElementById('exportCsv').click();const csv=await new Promise(resolve=>{const r=new b.w.FileReader();r.onload=()=>resolve(r.result);r.readAsText(b.captures[0]);});assert.ok(csv.includes("'=HYPERLINK"));assert.deepEqual(b.errors,[]);
- }finally{b.close();}
-});
-test('cloud page failure clears all partial counts and disables export',async()=>{
- let page=0;const b=browser('researcher',async(url)=>{
-  if(String(url).includes('/token?'))return new Response(JSON.stringify({access_token:'good'}));
-  if(String(url).includes('/research/records')){page++;if(page===1)return new Response(JSON.stringify({rows:[{pid:'one',group_name:'A',status:'completed',record:{}}],has_more:true}));throw new Error('connection lost');}
-  return new Response(JSON.stringify({ready:true}));
- });try{
-  b.document.getElementById('email').value='x@example.test';b.document.getElementById('password').value='not-a-real-password';b.document.getElementById('loginForm').dispatchEvent(new b.w.Event('submit',{cancelable:true}));await settle(()=>b.document.getElementById('scope').textContent.includes('无法读取云端数据'));
-  assert.equal(b.document.getElementById('metrics').hidden,true);assert.equal(b.document.getElementById('exportCsv').disabled,true);assert.deepEqual(b.errors,[]);
- }finally{b.close();}
+test('game proxy enforces owner auth and strips client rules and post-test answers before calling AI',async()=>{
+ let input;const f=fixture({selfTestOnly:true,gameAI:async x=>{input=x;return {text:'测试游戏回复',recipe:[1,2,3,4,5]};}});
+ const body={mode:'delegation',recipe:[0,0,0,0,0],history:[{id:'H1',x:[2,4,3,1,2],delta:1}],question:'unsure',hiddenRule:'never-send',testAnswers:['never-send']};
+ assert.equal((await f.request('/api/ai',body)).status,401);assert.equal(f.store.quotas.size,0);
+ assert.equal((await f.request('/api/ai',body,'',{Authorization:'Bearer ordinary'})).status,403);
+ const good=await f.request('/api/ai',body,'',{Authorization:'Bearer good'});assert.equal(good.status,200);assert.deepEqual((await good.json()).recipe,[1,2,3,4,5]);assert.equal(input.hiddenRule,undefined);assert.equal(input.testAnswers,undefined);
+ const b=await f.request('/api/ai',{...body,mode:'augmentation'},'',{Authorization:'Bearer good'});assert.equal((await b.json()).recipe,undefined);
+ assert.equal((await f.request('/api/ai',{...body,recipe:[99]},'',{Authorization:'Bearer good'})).status,400);
+ assert.equal(f.store.sessions.size,0);
 });

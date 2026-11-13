@@ -36,7 +36,9 @@ export function browser(name,fetcher,{url='https://huangrui1008-collab.github.io
   for(const [k,v]of Object.entries(session))w.sessionStorage.setItem(k,v);
   for(const [k,v]of Object.entries(local))w.localStorage.setItem(k,v);
   const captures=[];w.URL.createObjectURL=b=>{captures.push(b);return 'blob:test';};w.URL.revokeObjectURL=()=>{};w.HTMLAnchorElement.prototype.click=()=>{};
-  for(const file of ['config.js','materials.js',name==='index'?'experiment.js':'researcher.js']){const script=w.document.createElement('script');script.textContent=fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');w.document.body.appendChild(script);}
+  for(const file of (name==='index'?['config.js','alien-zoo.js']:['config.js','materials.js','researcher.js'])){const script=w.document.createElement('script');script.textContent=fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');w.document.body.appendChild(script);}
+  w.confirm=()=>true;
+  if(name==='researcher'){const script=w.document.createElement('script');script.textContent=fs.readFileSync(new URL('../alien-researcher.js',import.meta.url),'utf8');w.document.body.appendChild(script);}
   return {dom,w,document:w.document,errors,captures,close:()=>w.close()};
 }
 export function fetchHandler(handler){return (url,init={})=>handler(new Request(url,{...init,headers:{Origin:'https://huangrui1008-collab.github.io',...init.headers}}));}
