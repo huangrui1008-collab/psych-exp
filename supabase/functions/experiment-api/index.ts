@@ -39,6 +39,18 @@ const handler=createHandler({
   dailyChats:Number(Deno.env.get('DAILY_CHAT_LIMIT')||40),
   async ready() { return !!Deno.env.get('DEEPSEEK_API_KEY') && checked(await db.rpc('study2_backend_ready'))===true; },
   async auth(jwt: string) { const {data,error}=await db.auth.getUser(jwt); return error?null:data.user; },
+  async gameAI(input: any) {
+    const policy=input.mode==='delegation'
+      ? '你是外星动物饲养实验里的AI食谱助手。只可以利用提供的历史食谱与真实结果。输出一套完整的5种植物份数组合，每项为0至6整数，并用一句通俗中文解释根据哪些历史记录做出建议。不能声称已知隐藏规律。只输出JSON对象，字段为text和recipe（五个整数）。'
+      : '你是外星动物饲养实验里的AI辅助分析助手。只可以利用提供的历史食谱与真实结果，帮助用户对照观察和考虑下一步。不要提供任何完整食谱或最终标准答案；只用2到3句通俗中文给出观察、合理疑问或可比较方向。不能声称已知隐藏规律。只输出JSON对象，字段为text。';
+    const r=await fetch('https://api.deepseek.com/chat/completions',{
+      method:'POST',signal:AbortSignal.timeout(18000),
+      headers:{'Content-Type':'application/json',Authorization:'Bearer '+Deno.env.get('DEEPSEEK_API_KEY')},
+      body:JSON.stringify({model:'deepseek-chat',temperature:0.2,max_tokens:800,response_format:{type:'json_object'},messages:[{role:'system',content:policy},{role:'user',content:JSON.stringify({...input,plantOrder:['雾绒草','蓝铃叶','星冠蕨','珊瑚枝','月芽藤']})}]})
+    });
+    if(!r.ok)throw new ApiError(502,'游戏AI服务暂不可用');
+    const data=await r.json();try{return JSON.parse(data.choices?.[0]?.message?.content||'{}');}catch{throw new ApiError(502,'AI返回格式暂不可用');}
+  },
   async ai(messages: any[], group: string) {
     const r=await fetch('https://api.deepseek.com/chat/completions',{
       method:'POST',signal:AbortSignal.timeout(60000),

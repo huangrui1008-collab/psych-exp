@@ -44,7 +44,7 @@ export function validateRecord(input, step, m, complete = false) {
   }
   return result;
 }
-export function createHandler({store, materials:m, auth, ai, ready, origins, dailyStarts=1000, dailyChats=500, selfTestOnly=true}) {
+export function createHandler({store, materials:m, auth, ai, gameAI, ready, origins, dailyStarts=1000, dailyChats=500, selfTestOnly=true}) {
   return async req => {
     const origin=req.headers.get('Origin');
     const cors={'Vary':'Origin','Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization, apikey, X-Session-Token','Access-Control-Max-Age':'600','Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'};
@@ -90,6 +90,17 @@ export function createHandler({store, materials:m, auth, ai, ready, origins, dai
       if (Number(req.headers.get('content-length')||0)>250000) fail(413,'记录过大');
       const bodyText=await req.text(); if (bodyText.length>250000) fail(413,'记录过大');
       let b; try { b=JSON.parse(bodyText); } catch { fail(400,'请求格式无效'); }
+      if (route==='/api/ai') {
+        if (!selfTestOnly) await requireOwner();
+        const validRecipe=x=>Array.isArray(x)&&x.length===5&&x.every(n=>Number.isInteger(n)&&n>=0&&n<=6);
+        if (!b || !['delegation','augmentation'].includes(b.mode) || !validRecipe(b.recipe) || !Array.isArray(b.history) || b.history.length>15 || b.history.some(x=>!x||!validRecipe(x.x)||!Number.isFinite(x.delta)||Math.abs(x.delta)>100)) fail(400,'游戏请求格式无效');
+        if (!gameAI || !await ready()) fail(503,'真实AI尚未连接');
+        if (!await store.quota('alien-zoo-chat',40)) fail(429,'今日游戏AI试用额度已用完');
+        const result=await gameAI({mode:b.mode,recipe:b.recipe,question:String(b.question||'unsure').slice(0,25),history:b.history.map(x=>({id:String(x.id||'R').slice(0,20),x:x.x,delta:x.delta}))});
+        if (!result || typeof result.text!=='string' || !result.text.trim()) fail(502,'AI未返回有效游戏回复');
+        if (b.mode==='delegation'&&!validRecipe(result.recipe)) fail(502,'AI返回的食谱格式无效');
+        return response({kind:b.mode==='delegation'?'plan':'guide',text:result.text.slice(0,850),...(b.mode==='delegation'?{recipe:result.recipe}:{})});
+      }
       if (!b || !uuid.test(b.pid||'')) fail(400,'参与编号无效');
       const token=req.headers.get('X-Session-Token')||'';
       if (!tokenPattern.test(token)) fail(401,'本次参与凭据无效');
