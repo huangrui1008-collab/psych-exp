@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>外星饲养站｜研究者试玩 V0.6</title>
+<title>外星饲养站｜Alien Zoo</title>
 <style>
 :root { color-scheme:light; font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif; color:#20302a; background:#f5f7f4; font-size:15px; }
 *{box-sizing:border-box} body{margin:0} button,input,select,textarea{font:inherit}
@@ -20,14 +20,15 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 @media(max-width:720px){.grid,.groups,.settings{grid-template-columns:1fr}.card{padding:16px}.plants{gap:5px}.plant{padding:7px 2px}.plant b{font-size:11px}.plant .icon{font-size:24px}.plant input{width:43px}.questions{grid-template-columns:1fr}.creatures{gap:2px}.critter{font-size:15px;width:22px;height:22px;line-height:22px}header h1{font-size:17px}}
 header small{color:#e0eee7;opacity:1}[hidden]{display:none!important}.preview-links a{color:#fff;margin-left:12px;font-size:13px}#gameConnection{max-width:1024px;margin:18px auto}#gameLoginForm label{display:block}#gameLoginForm input{padding:9px;border:1px solid #b8cabb;border-radius:7px;max-width:100%}
 </style>
+<link rel="stylesheet" href="participant.css?v=20261117-layout">
 </head>
 <body>
-<header><div><h1>外星饲养站</h1><small>Alien Zoo · 研究者试玩 V0.6</small></div><nav class="preview-links"><a href="./">随机试玩</a><a href="?group=A">A组</a><a href="?group=B">B组</a><a href="researcher.html">研究者看板</a></nav></header>
-<details class="card" id="gameConnection"><summary>连接真实AI（可选，默认模拟AI可直接试玩）</summary><p>原型默认使用模拟AI。使用真实AI时，先用研究者账号登录，再在下方研究者设置中切换AI来源。游戏记录目前保存在本浏览器，可导出；尚未接入游戏云端汇总。</p><form id="gameLoginForm" class="row"><label>邮箱<input type="email" value="huangrui1008@gmail.com" readonly autocomplete="username"></label><label>研究者密码<input id="gamePassword" type="password" required autocomplete="current-password"></label><button id="gameLogin" type="submit">连接真实AI</button></form><p id="gameAuthMessage" role="status"></p><a href="researcher.html?account=1">忘记密码</a></details>
+<header><div><h1>外星饲养站</h1><small>Alien Zoo</small></div><span class="header-caption">观察 · 选择 · 喂养</span></header>
+<details class="card" id="gameConnection" hidden><summary>真实AI连接设置</summary><p>研究者可在此核对真实AI连接。未连接时使用模拟回复；游戏记录目前仅保存在当前浏览器。</p><form id="gameLoginForm" class="row"><label>邮箱<input type="email" value="huangrui1008@gmail.com" readonly autocomplete="username"></label><label>研究者密码<input id="gamePassword" type="password" required autocomplete="current-password"></label><button id="gameLogin" type="submit">连接真实AI</button></form><p id="gameAuthMessage" role="status"></p><a href="researcher.html?account=1">忘记密码</a></details>
 <main id="app"></main>
-<footer>任务形式参考 Kuhl 等（2023）Alien Zoo（原项目 CC BY 4.0）。当前为研究者试玩，不用于正式招募。</footer>
+<footer>任务形式参考 Kuhl 等（2023）Alien Zoo · 原项目 CC BY 4.0</footer>
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js" defer></script>
-<script src="alien-zoo.js?v=20261107-v06" defer></script>
+<script src="alien-zoo.js?v=20261117-layout" defer></script>
 </body>
 </html>

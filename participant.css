@@ -1,0 +1,44 @@
+/* 被试页面：目标、记录、动物、AI、食谱依次呈现。 */
+header{padding-block:19px;min-height:82px}
+header h1{font-size:23px;letter-spacing:.03em}
+header small{display:block;margin-top:4px;font-size:12px;letter-spacing:.12em}
+.header-caption{font-size:13px;color:#d2e5db;letter-spacing:.08em}
+main{max-width:1000px;margin:30px auto 36px}
+.round-heading{margin-bottom:14px}
+.round-heading .tag{font-size:14px}
+.exit-button{padding:8px 12px;background:transparent;color:#65766c;font-size:13px;font-weight:400;border:1px solid #cedacf}
+.goal{padding:20px 22px;margin-bottom:14px}
+.goal-title{font-size:18px}
+.goal .meter{margin-block:14px}
+.history-card{padding:18px 22px}
+.history-card h2{font-size:16px;margin-bottom:10px}
+.history-card .table-scroll{max-height:230px;overscroll-behavior:contain}
+.history-card th{position:sticky;top:0;background:#fff;z-index:1}
+.table-recipes{min-width:560px}
+.table-recipes th:first-child{width:68px}
+.table-recipes th:last-child{width:88px}
+.animal-card{padding:22px}
+.animal-card h2{font-size:17px;margin:0}
+.animal-card .zoo{min-height:90px;margin:15px 0 9px;display:flex;align-items:center}
+.creatures{gap:7px}
+.critter{width:30px;height:30px;line-height:30px;font-size:18px}
+.section-kicker{display:block;margin-bottom:8px;font-size:12px;letter-spacing:.12em;color:#6b8377}
+.conversation-card h2,.recipe-card h2{font-size:19px}
+.conversation-card .ai{margin-bottom:0}
+.conversation-card .ai p{line-height:1.85}
+.recipe-card .plants{gap:12px;margin:20px 0}
+.recipe-card .plant{padding:17px 8px}
+.recipe-card .plant b{font-size:14px}
+.recipe-card .plant .icon{font-size:35px;margin:10px 0}
+.recipe-card .plant input{font-size:20px;width:74px;padding:10px 0}
+.recipe-card .plant input:focus{border-color:#256b57}
+.feed-actions{justify-content:flex-end;margin-bottom:0}
+.feed-actions [data-do=feed]{min-width:170px;padding:14px 24px}
+.intro-card{max-width:760px;margin:52px auto;padding:32px}
+.intro-card h2{font-size:23px}
+.intro-card .buttons{margin-bottom:0;margin-top:24px}
+.rule-option{display:flex!important;gap:10px;align-items:flex-start;font-weight:400!important;margin:10px 0!important;padding:14px;border:1px solid #d6e2d6;border-radius:9px;line-height:1.7;cursor:pointer}
+.rule-option:has(input:checked){background:#edf5ed;border-color:#28725a}
+.rule-option input{margin-top:6px;flex:none}
+.rule-option .food{padding:0;border:0;background:transparent;font-size:inherit;white-space:normal}
+@media(max-width:600px){header{padding:16px 18px}.header-caption{display:none}main{margin-top:20px;padding:0 14px}.goal,.history-card,.animal-card{padding:16px}.goal .between{align-items:flex-start;gap:8px}.goal-title{font-size:16px}.goal-summary{font-size:13px}.recipe-card .plants{gap:5px}.recipe-card .plant{padding:12px 2px}.recipe-card .plant b{font-size:11px}.recipe-card .plant .icon{font-size:27px}.recipe-card .plant input{font-size:18px;width:45px}.intro-card{padding:22px;margin:26px auto}.feed-actions [data-do=feed]{width:100%}.creatures{gap:5px}.critter{width:27px;height:27px;line-height:27px}}
