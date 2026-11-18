@@ -1,7 +1,8 @@
 [functions.experiment-api]
-# Owner-only self-test: every participant request requires a real, confirmed
-# owner Auth session and allowlist membership inside the function, plus its
-# own session capability. No anonymous starts or AI calls are accepted.
+# Report self-test and research routes retain confirmed owner authentication.
+# Alien Zoo /game/access issues a short-lived, game-only capability; /game/chat
+# verifies its scope, session and group, and applies daily/session/minute limits.
+# It grants no database read or researcher access. AI secrets remain server-side.
 verify_jwt = false
 
 [functions.research-api]
