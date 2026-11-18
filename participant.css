@@ -66,3 +66,6 @@ main{max-width:1000px;margin:30px auto 36px}
 .rule-option input{margin-top:6px;flex:none}
 .rule-option .food{padding:0;border:0;background:transparent;font-size:inherit;white-space:normal}
 @media(max-width:600px){header{padding:16px 18px}.header-caption{display:none}main{margin-top:20px;padding:0 14px}.goal,.history-card,.animal-card{padding:16px}.goal .between{align-items:flex-start;gap:8px}.goal-title{font-size:16px}.goal-summary{font-size:13px}.recipe-card .plants{gap:5px}.recipe-card .plant{padding:12px 2px}.recipe-card .plant b{font-size:11px}.recipe-card .plant .icon{font-size:27px}.recipe-card .plant input{font-size:18px;width:45px}.intro-card{padding:22px;margin:26px auto}.feed-actions [data-do=feed]{width:100%}.creatures{gap:5px}.critter{width:27px;height:27px;line-height:27px}}
+
+.chat-shortcuts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:13px}
+.chat-shortcuts .secondary{min-width:0;text-align:left;white-space:normal;line-height:1.6;padding:10px 14px}
