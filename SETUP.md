@@ -2,7 +2,7 @@
 
 ## 安全暂停
 
-AI_CALLS_ENABLED默认关闭。仅在实验专用密钥与调用预算配置完成后，才可将其设置为true恢复模型调用。密钥只保存在Supabase后台，不放进源码、网页或聊天；网站限额不等于供应商账户的金额上限。
+AI_CALLS_ENABLED未设置时默认关闭。开放参与配置设为true以启用游戏模型调用；设为false可立即暂停。旧报告AI还要求LEGACY_REPORT_AI_ENABLED=true，默认不启用。密钥只保存在Supabase后台，不放进源码、网页或聊天；网站限额不等于供应商账户的金额上限。
 
 ## 已有配置
 
@@ -12,7 +12,7 @@ AI_CALLS_ENABLED默认关闭。仅在实验专用密钥与调用预算配置完�
 
 POST /game/access：提交游戏会话UUID和组别，签发两小时有效的游戏专用凭据。POST /game/chat：验证X-Game-Token与会话、组别后处理文字对话。该凭据不授予任何数据库读取或研究者权限；网页刷新后重新签发，不保存到本地存储或导出文件。
 
-默认全项目200条真实对话/UTC日、同一会话60条/UTC日、同一会话8条/分钟；签发连接400次/UTC日。前两项可用GAME_DAILY_CHAT_LIMIT和GAME_SESSION_CHAT_LIMIT设置。额度使用原study2_reserve_quota原子函数，不需要新增数据库表。仅追加额度计数，不修改历史报告记录。
+默认不设全项目或单会话对话总次数上限；同一会话8条/分钟，签发连接400次/UTC日。GAME_DAILY_CHAT_LIMIT和GAME_SESSION_CHAT_LIMIT只有设为正整数时才启用对应总量限制，0或未设置表示不启用。公开入口不验证参与者身份，任何访问者都可领取游戏凭据；不能保证阻止脚本仿造请求。额度使用原study2_reserve_quota原子函数，不需要新增数据库表。仅追加额度计数，不修改历史报告记录。
 
 /game/路由独立处理游戏会话；旧/start、/progress、/complete、/chat和/api/ai仍按原有研究者验证执行。/research/*和research-api仅允许已确认的huangrui1008@gmail.com与服务器UUID名单；数据库依然禁止anon/authenticated直接读取。平台verify_jwt配置继续为false，由各路由内部完成各自鉴权。
 
