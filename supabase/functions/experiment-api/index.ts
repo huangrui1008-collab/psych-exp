@@ -39,8 +39,8 @@ const handler=createHandler({
   selfTestOnly:true,
   gameCapabilities:createGameCapabilities(serviceKey),
   gameEnabled:()=>aiEnabled,
-  gameDailyLimit:Number(Deno.env.get('GAME_DAILY_CHAT_LIMIT')||200),
-  gameSessionLimit:Number(Deno.env.get('GAME_SESSION_CHAT_LIMIT')||60),
+  gameDailyLimit:Number(Deno.env.get('GAME_DAILY_CHAT_LIMIT')||0),
+  gameSessionLimit:Number(Deno.env.get('GAME_SESSION_CHAT_LIMIT')||0),
   origins:(Deno.env.get('ALLOWED_ORIGINS')||'https://huangrui1008-collab.github.io').split(',').map(x=>x.trim()).filter(Boolean),
   dailyStarts:Number(Deno.env.get('DAILY_START_LIMIT')||20),
   dailyChats:Number(Deno.env.get('DAILY_CHAT_LIMIT')||40),
@@ -68,6 +68,7 @@ const handler=createHandler({
     const data=await r.json();try{return {...JSON.parse(data.choices?.[0]?.message?.content||'{}'),model:data.model||model};}catch{throw new ApiError(502,'AI返回格式暂不可用');}
   },
   async ai(messages: any[], group: string) {
+    if(Deno.env.get('LEGACY_REPORT_AI_ENABLED')!=='true')throw new ApiError(502,'旧报告AI未启用。');
     if(!aiEnabled)throw new ApiError(502,'AI调用已暂停，请联系研究者。');
     const r=await fetch('https://api.deepseek.com/chat/completions',{
       method:'POST',signal:AbortSignal.timeout(60000),

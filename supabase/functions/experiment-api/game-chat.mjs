@@ -25,7 +25,7 @@ export function createGameCapabilities(secret,now=()=>Date.now()){
 class ChatError extends Error{constructor(status,message){super(message);this.status=status;}}
 const reject=(status,message)=>{throw new ChatError(status,message);};
 const recipe=x=>Array.isArray(x)&&x.length===5&&x.every(n=>Number.isInteger(n)&&n>=0&&n<=6);
-export function createGameChatRouter({store,ready,ai,capabilities,enabled=()=>true,dailyLimit=200,sessionLimit=60,now=()=>Date.now()}){
+export function createGameChatRouter({store,ready,ai,capabilities,enabled=()=>true,dailyLimit=0,sessionLimit=0,now=()=>Date.now()}){
   return async(req,route,headers)=>{
     const response=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
     try{
@@ -51,9 +51,9 @@ export function createGameChatRouter({store,ready,ai,capabilities,enabled=()=>tr
         count+=m.content.length;return {role:m.role,content:m.content.trim()};
       });
       if(count>14000||messages.at(-1).role!=='user')reject(400,'对话过长或缺少本次问题。');
-      if(!await store.quota('alien-zoo-session:'+access.sid,sessionLimit))reject(429,'本次游戏的AI对话次数已达上限，请联系研究者。');
+      if(sessionLimit>0&&!await store.quota('alien-zoo-session:'+access.sid,sessionLimit))reject(429,'本次游戏的AI对话次数已达上限，请联系研究者。');
       if(!await store.quota('alien-zoo-minute:'+access.sid+':'+Math.floor(now()/60000),8))reject(429,'发送得太快了，请稍等片刻后重试。');
-      if(!await store.quota('alien-zoo-real-chat',dailyLimit))reject(429,'今日AI对话次数已达上限，请联系研究者。');
+      if(dailyLimit>0&&!await store.quota('alien-zoo-real-chat',dailyLimit))reject(429,'今日AI对话次数已达上限，请联系研究者。');
       // Explicit allowlist: no hidden rules, answer keys, system roles or credentials reach the model.
       const result=await ai({mode:access.mode,round:b.round,recipe:b.recipe,messages,history:b.history.map(r=>({id:String(r.id||'R').slice(0,20),x:r.x,delta:r.delta}))});
       if(!result||typeof result.text!=='string'||!result.text.trim())reject(502,'AI暂未返回有效回复，请重试。');
