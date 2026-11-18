@@ -137,3 +137,13 @@ test('public browser assets contain no literal provider key or direct provider r
   assert.equal(text.includes('api.deepseek.com/chat/completions'),false,file+' must use the server proxy');
  }
 });
+
+
+test('open participation has no default conversation total cap but retains burst protection',async()=>{
+ let calls=0;const f=fixture({gameCapabilities:createGameCapabilities('public-flow'),gameAI:async()=>{calls++;return {text:'test'};}});
+ const base={session_id:crypto.randomUUID(),mode:'augmentation'},access=await f.request('/game/access',base),token=(await access.json()).token;
+ const body={...base,round:1,recipe:[0,0,0,0,0],history:[],messages:[{role:'user',content:'test'}]};
+ for(let i=0;i<8;i++)assert.equal((await f.request('/game/chat',body,'',{'X-Game-Token':token})).status,200);
+ assert.equal((await f.request('/game/chat',body,'',{'X-Game-Token':token})).status,429);assert.equal(calls,8);
+ assert.equal([...f.store.quotas.keys()].some(k=>k.startsWith('alien-zoo-session:')||k.startsWith('alien-zoo-real-chat')),false);
+});
