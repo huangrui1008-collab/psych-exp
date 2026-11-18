@@ -26,6 +26,8 @@ POST /game/access：提交游戏会话UUID和组别，签发两小时有效的�
 
 npm test覆盖A/B全流程、连续对话、IME键盘操作、一键填入、失败重试、游戏凭据签名/失效/组别绑定、配额与研究数据隔离。后端源文件为supabase/functions/experiment-api/index.ts、handler.mjs、game-chat.mjs；前端为index.html、alien-zoo.js和participant.css。部署保持原项目和既有数据。
 
-## A组高收益食谱
+## A组有变化的食谱
 
-游戏请求传difficulty（basic或advanced），旧客户端根据未改动的H1记录识别难度，缺少可识别记录时缺省advanced。用户索要食谱时，game-plans.mjs先按原规则计算高收益候选并按轮次选定一份，由模型解释；自由追问可选择候选plan_id或仅回答问题。服务器校验后返回recipe、expected_delta和recipe_rule_version。进阶增量8、基础增量6；不改变客户端投喂规则或初始示例，不发送后测答案。B组不接收此候选工具，仍只给分析线索。模型未选择有效候选时明确报错，不悄悄替换为固定回复。游戏数据仍在本机，历史记录不重算。
+请求传difficulty（basic或advanced），旧客户端按H1识别难度。game-plans.mjs使用原规则重算实际R轮记录，结合当前数量与剩余轮次筛选增量；每个候选都保留后续达到55只的可行性。通常选择围绕所需平均增量的组合，优先避免连续相同增量和重复食谱，需要追赶时才提高增量。采用推荐从头投喂可在十轮内达55只，用户自行改动可能影响结果。
+
+真实AI解释预先选定的食谱，自由追问也可从当前候选选择其他配方。返回recipe、expected_delta、recipe_rule_version与recipe_strategy_version；策略版本为varied-target-v1。不会修改客户端投喂公式、初始示例、后测答案或旧数据。B组不接收食谱工具，继续给分析线索。模型或配方不一致时明确报错，不生成模拟回复。
