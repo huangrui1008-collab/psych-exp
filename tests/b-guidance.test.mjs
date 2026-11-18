@@ -1,19 +1,19 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {browser,fixture,settle} from './helpers.mjs';
+import {browser,fixture,settle,enterGame} from './helpers.mjs';
 import {createGameCapabilities} from '../supabase/functions/experiment-api/game-chat.mjs';
 import {containsCompleteRecipe} from '../supabase/functions/experiment-api/b-guidance.mjs';
 
 test('B freely chats and follows up without recipe cards, recipe shortcuts or adopt controls even for old/stray recipe metadata',async()=>{
  const calls=[];const b=browser('index',async(url,init)=>{if(String(url).endsWith('/game/access'))return new Response(JSON.stringify({token:'test-only',expires_in:7200}));const body=JSON.parse(init.body);calls.push(body);return new Response(JSON.stringify({text:'先比较保持不变的条件，再判断有哪些差异。',source:'real',recipe:[2,4,3,1,2],expected_delta:8}));},{url:'https://huangrui1008-collab.github.io/psych-exp/?group=B'});
  try{
-  b.document.querySelector('[data-do=start]').click();
+  enterGame(b);
   for(const message of ['我不太理解这些记录，应该怎么比较？','你刚才说一次只调整一个因素，为什么？']){
    const input=b.document.getElementById('chatInput');input.value=message;input.dispatchEvent(new b.w.Event('input',{bubbles:true}));b.document.getElementById('chatForm').dispatchEvent(new b.w.Event('submit',{bubbles:true,cancelable:true}));await settle(()=>b.document.getElementById('aiAck')&&!b.document.querySelector('.chat-waiting'));
    assert.equal(b.document.querySelector('[data-do=adopt]'),null);assert.equal(b.document.querySelector('[data-do=fill-recipe-prompt]'),null);assert.equal(b.document.querySelector('.chat-message .recipe-mini'),null);
   }
   assert.equal(calls.length,2);assert.equal(calls[1].messages.at(-1).content,'你刚才说一次只调整一个因素，为什么？');assert.equal(calls[1].messages.length,3);
-  const old=JSON.parse(b.w.localStorage.getItem('az-preview-v06-session-B'));old.chatHistory[1].recipe=[2,4,3,1,2];const local={'az-preview-v06-session-B':JSON.stringify(old)};
-  const again=browser('index',async()=>{throw Error('not needed')},{url:'https://huangrui1008-collab.github.io/psych-exp/?group=B',local});try{assert.equal(again.document.querySelector('.chat-message .recipe-mini'),null);assert.equal(again.document.querySelector('[data-do=adopt]'),null);assert.deepEqual(JSON.parse(again.w.localStorage.getItem('az-preview-v06-session-B')).chatHistory[1].recipe,[2,4,3,1,2]);}finally{again.close();}
+  const old=JSON.parse(b.w.localStorage.getItem('az-flow-v1-session-B'));old.chatHistory[1].recipe=[2,4,3,1,2];const local={'az-flow-v1-session-B':JSON.stringify(old)};
+  const again=browser('index',async()=>{throw Error('not needed')},{url:'https://huangrui1008-collab.github.io/psych-exp/?group=B',local});try{assert.equal(again.document.querySelector('.chat-message .recipe-mini'),null);assert.equal(again.document.querySelector('[data-do=adopt]'),null);assert.deepEqual(JSON.parse(again.w.localStorage.getItem('az-flow-v1-session-B')).chatHistory[1].recipe,[2,4,3,1,2]);}finally{again.close();}
   assert.deepEqual(b.errors,[]);
  }finally{b.close();}
 });

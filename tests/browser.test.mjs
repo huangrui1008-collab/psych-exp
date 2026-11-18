@@ -1,14 +1,14 @@
 import fs from 'node:fs';
 import test from 'node:test';import assert from 'node:assert/strict';
-import {browser,fixture,settle,tick} from './helpers.mjs';
+import {browser,fixture,settle,tick,enterGame} from './helpers.mjs';
 import {createGameCapabilities} from '../supabase/functions/experiment-api/game-chat.mjs';
 const noNetwork=async()=>{throw Error('offline');};
 const chatNetwork=async(url,init={})=>{if(String(url).endsWith('/game/access'))return new Response(JSON.stringify({token:'test-game-token',expires_in:7200}));const b=JSON.parse(init.body);return new Response(JSON.stringify({source:'real',text:'真实接口格式的测试回应：'+b.messages.at(-1).content,model:'test-model',...(b.mode==='delegation'?{recipe:[2,4,3,1,2]}:{})}));};
 function typeChat(b,text){const input=b.document.getElementById('chatInput');input.value=text;input.dispatchEvent(new b.w.Event('input',{bubbles:true}));}
 async function send(b,text){typeChat(b,text);b.document.getElementById('chatForm').dispatchEvent(new b.w.Event('submit',{bubbles:true,cancelable:true}));await settle(()=>b.document.getElementById('aiAck')&&!b.document.querySelector('.chat-waiting'));}
 
-function press(b,action){[...b.document.querySelectorAll('[data-do="'+action+'"]')].find(x=>!x.closest('.group')?.hidden).click();}
-function game(b){return JSON.parse(b.w.localStorage.getItem('az-preview-v06-session-'+(new URL(b.w.location).searchParams.get('group')||'random')));}
+function press(b,action){if(action==='start'){enterGame(b);return}[...b.document.querySelectorAll('[data-do="'+action+'"]')].find(x=>!x.closest('.group')?.hidden).click();}
+function game(b){return JSON.parse(b.w.localStorage.getItem('az-flow-v1-session-'+(new URL(b.w.location).searchParams.get('group')||'random')));}
 async function completeGame(b){
  press(b,'start');
  for(let round=0;round<10;round++){
@@ -25,8 +25,9 @@ async function completeGame(b){
   for(const select of form.querySelectorAll('select'))select.selectedIndex=1;
   form.dispatchEvent(new b.w.Event('submit',{cancelable:true}));
  }
+ while(b.document.querySelector('[data-do=flow-next]'))b.document.querySelector('[data-do=flow-next]').click();
  assert.equal(game(b).stage,'done');assert.equal(game(b).rounds.length,10);assert.equal(game(b).is_test,true);
- assert.match(b.document.getElementById('app').textContent,/喂养与独立测试已完成/);
+ assert.match(b.document.getElementById('app').textContent,/本次流程核对结束/);
  assert.equal(b.document.querySelector('[data-do=reset]'),null);assert.deepEqual(b.errors,[]);
 }
 test('correct V0.6 game replaces the report; A/B finish all rounds and tests, preserve separate local records',async()=>{
@@ -36,7 +37,7 @@ test('correct V0.6 game replaces the report; A/B finish all rounds and tests, pr
    await completeGame(b);assert.equal(game(b).mode,group==='A'?'delegation':'augmentation');Object.assign(states,Object.fromEntries(Object.entries(b.w.localStorage)));
   }finally{b.close();}
  }
- assert.ok(states['az-preview-v06-session-A']);assert.ok(states['az-preview-v06-session-B']);
+ assert.ok(states['az-flow-v1-session-A']);assert.ok(states['az-flow-v1-session-B']);
  const dashboard=browser('researcher',noNetwork,{local:states});try{await tick();assert.match(dashboard.document.getElementById('gameScope').textContent,/2 次记录/);assert.equal(dashboard.document.querySelectorAll('#gameRows tr').length,2);assert.equal(dashboard.document.getElementById('legacyData').open,false);dashboard.document.getElementById('gameExportJson').click();dashboard.document.getElementById('gameExportCsv').click();assert.equal(dashboard.captures.length,2);assert.deepEqual(dashboard.errors,[]);}finally{dashboard.close();}
 });
 test('root entry randomly assigns both modes; invalid group creates no game; exit locks and researcher can reset',async()=>{
@@ -94,7 +95,7 @@ test('chat keyboard supports send, newline and Chinese composition; imported old
   input.dispatchEvent(new b.w.KeyboardEvent('keydown',{key:'Enter',shiftKey:true,bubbles:true,cancelable:true}));
   input.dispatchEvent(new b.w.KeyboardEvent('keydown',{key:'Enter',isComposing:true,bubbles:true,cancelable:true}));assert.equal(chats,0);
   input.dispatchEvent(new b.w.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));await settle(()=>b.document.getElementById('aiAck'));assert.equal(chats,1);
-  const local=Object.fromEntries(Object.entries(b.w.localStorage));const old=JSON.parse(local['az-preview-v06-session-A']);old.ai={source:'mock',text:'旧的固定回复'};old.aiAcknowledged=true;old.chatHistory=[];local['az-preview-v06-session-A']=JSON.stringify(old);
+  const local=Object.fromEntries(Object.entries(b.w.localStorage));const old=JSON.parse(local['az-flow-v1-session-A']);old.ai={source:'mock',text:'旧的固定回复'};old.aiAcknowledged=true;old.chatHistory=[];local['az-flow-v1-session-A']=JSON.stringify(old);
   const reloaded=browser('index',chatNetwork,{url:'https://huangrui1008-collab.github.io/psych-exp/?group=A',local});try{assert.equal(reloaded.document.querySelector('[data-do=feed]').disabled,true);assert.equal(reloaded.document.getElementById('aiAck'),null);assert.doesNotMatch(reloaded.document.getElementById('app').textContent,/旧的固定回复/);}finally{reloaded.close();}
  }finally{b.close();}
 });

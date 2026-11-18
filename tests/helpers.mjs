@@ -42,3 +42,5 @@ export function browser(name,fetcher,{url='https://huangrui1008-collab.github.io
   return {dom,w,document:w.document,errors,captures,close:()=>w.close()};
 }
 export function fetchHandler(handler){return (url,init={})=>handler(new Request(url,{...init,headers:{Origin:'https://huangrui1008-collab.github.io',...init.headers}}));}
+
+export function enterGame(b){b.document.querySelector('[data-do=start]').click();for(let i=0;i<2;i++){const next=b.document.querySelector('[data-do=flow-next]');if(!next)throw Error('Expected pre-game flow step');next.click();}}

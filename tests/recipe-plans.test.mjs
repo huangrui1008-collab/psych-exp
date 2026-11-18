@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {browser,fixture,settle} from './helpers.mjs';
+import {browser,fixture,settle,enterGame} from './helpers.mjs';
 import {createGameCapabilities} from '../supabase/functions/experiment-api/game-chat.mjs';
 import {recipeOutcome,verifiedRecipePlans,resolveRecipePlan,gameDifficulty,requestsRecipe,conversationForProvider,chooseVariedRecipe,feedingProgress,RECIPE_RULE_VERSION,RECIPE_STRATEGY_VERSION} from '../supabase/functions/experiment-api/game-plans.mjs';
 
@@ -25,14 +25,14 @@ test('ten rounds adopting verified A recipes reach the target using unchanged fr
    const plans=verifiedRecipePlans(input),prepared=chooseVariedRecipe(input,plans,()=>0.37);return new Response(JSON.stringify({...resolveRecipePlan({text:'模型解释测试食谱'},plans,prepared),source:'real'}));
   },{url:'https://huangrui1008-collab.github.io/psych-exp/?group=A',local:{'az-preview-v06-settings':JSON.stringify({difficulty})}});
   try{
-   b.document.querySelector('[data-do=start]').click();
+   enterGame(b);
    for(let i=0;i<10;i++){
     b.document.querySelector('[data-do=fill-recipe-prompt]').click();b.document.getElementById('chatForm').dispatchEvent(new b.w.Event('submit',{bubbles:true,cancelable:true}));await settle(()=>b.document.getElementById('aiAck'));
     b.document.querySelector('[data-do=adopt]').click();const ack=b.document.getElementById('aiAck');ack.checked=true;ack.dispatchEvent(new b.w.Event('change',{bubbles:true}));b.document.querySelector('[data-do=feed]').click();
-    const state=JSON.parse(b.w.localStorage.getItem('az-preview-v06-session-A'));assert.ok(state.rounds.at(-1).delta>=2&&state.rounds.at(-1).delta<=6);assert.equal(state.rounds.at(-1).aiExpectedDelta,state.rounds.at(-1).delta);assert.equal(state.rounds.at(-1).aiRecipeRuleVersion,RECIPE_RULE_VERSION);
+    const state=JSON.parse(b.w.localStorage.getItem('az-flow-v1-session-A'));assert.ok(state.rounds.at(-1).delta>=2&&state.rounds.at(-1).delta<=6);assert.equal(state.rounds.at(-1).aiExpectedDelta,state.rounds.at(-1).delta);assert.equal(state.rounds.at(-1).aiRecipeRuleVersion,RECIPE_RULE_VERSION);
     if(i<9)b.document.querySelector('[data-do=next]').click();
    }
-   const state=JSON.parse(b.w.localStorage.getItem('az-preview-v06-session-A'));assert.ok(state.pack>=55&&state.pack<=65);assert.ok(new Set(state.rounds.map(r=>r.delta)).size>=3);assert.ok(new Set(state.rounds.map(r=>JSON.stringify(r.x))).size>=6);assert.ok(state.rounds.every(r=>r.aiRecipeStrategyVersion===RECIPE_STRATEGY_VERSION));assert.deepEqual(b.errors,[]);
+   const state=JSON.parse(b.w.localStorage.getItem('az-flow-v1-session-A'));assert.ok(state.pack>=55&&state.pack<=65);assert.ok(new Set(state.rounds.map(r=>r.delta)).size>=3);assert.ok(new Set(state.rounds.map(r=>JSON.stringify(r.x))).size>=6);assert.ok(state.rounds.every(r=>r.aiRecipeStrategyVersion===RECIPE_STRATEGY_VERSION));assert.deepEqual(b.errors,[]);
   }finally{b.close();}
  }
 });
