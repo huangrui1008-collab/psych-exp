@@ -1,26 +1,26 @@
-# Alien Zoo · 游戏界面调整（2026-11-17）
+# Alien Zoo · 真实AI对话（2026-11-18）
 
-本轮完成A组游戏画面：目标 → 投喂记录 → 动物展示 → AI区域 → 食谱选择 → 确认投喂。参与者页面移除试玩字样和切组／管理入口，保留一键填入食谱；独立测试第三部分的规律选项已增加植物图标。根链接在打开时确定并保留本机随机分组。
+继续原项目与原地址，以原对话下载核对的V0.6游戏为基础。A组画面按“目标、投喂记录、动物、AI对话、食谱、确认投喂”排列；共同问卷条目和完整正式施测流程仍待定。
 
-这是界面调整，不是完整正式实验交付。真实自由文字对话、被试API凭据和新的完整问卷流程尚未接入；当前保留原有模拟回复及研究者真实AI连接机制，游戏仍仅本机保存。研究者可在 `researcher.html` 的“A组页面设置／B组页面设置”进入管理画面；管理参数只控制显示，真实AI与历史云端数据权限仍由服务器核验。
+- 根入口（打开即在本机确定并保存随机组别）：https://huangrui1008-collab.github.io/psych-exp/
+- A组：https://huangrui1008-collab.github.io/psych-exp/?group=A
+- B组：https://huangrui1008-collab.github.io/psych-exp/?group=B
+- 研究者：https://huangrui1008-collab.github.io/psych-exp/researcher.html
 
-# Alien Zoo · 研究者试玩 V0.6
+## 真实文字对话
 
-当前主页面已更换为《严谨探讨研究课题》原对话下载的 Alien Zoo V0.6 游戏，以研究者先试玩、后改条目为目标，不使用旧报告任务作为当前实验。
+两组均可输入文字、多轮追问，Enter发送，Shift+Enter换行；中文输入法选词时不会误发。A组可向AI索要完整食谱，并点击对应回复的“一键填入食谱”，之后仍可修改。B组获得分析线索和反馈，服务端不返回完整食谱字段。两组每轮必须收到真实AI回应并确认查看后，才可投喂。进入下一轮不自动请求AI。
 
-- 根链接随机分组：https://huangrui1008-collab.github.io/psych-exp/
-- 固定 A（AI先出食谱）：https://huangrui1008-collab.github.io/psych-exp/?group=A
-- 固定 B（自己先想再问AI）：https://huangrui1008-collab.github.io/psych-exp/?group=B
-- 研究者看板：https://huangrui1008-collab.github.io/psych-exp/researcher.html
+前端和后端没有固定模拟回复或失败时模拟回退。错误明确显示，可重试上一条，失败请求不会冒充助手回复。对话与逐轮投喂、独立测试仍在浏览器保存，可由研究者导出；游戏尚无跨设备云端汇总。旧的模拟轮次数据保留其原始来源，不删除也不改写为真实AI。
 
-默认模拟AI，可直接开始。每组10轮投喂，之后有三段独立测试；题目、规则、植物与动物名称沿用下载的V0.6，主观量表仍未定稿。退出锁定与研究者重置均保留。每组在本浏览器分别保存，不相互覆盖。
+## 服务端
 
-游戏数据目前只保存在当前浏览器，可在游戏中导出完整JSON，在研究者看板查看、导入并导出JSON或CSV。它不是跨设备的云端参与者汇总。原Supabase中的旧报告数据与研究者账号机制保留，看板中独立折叠显示。
+使用原Supabase项目与DEEPSEEK_API_KEY，密钥不进入网页。/game/access签发两小时有效、仅限本会话和组别的游戏凭据；/game/chat验证后调用DeepSeek。凭据只保存在页面内存，不能读取研究数据，也不能调用旧报告操作。默认限制：全项目每天200条真实游戏对话、每会话每天60条、每分钟8条；连接签发每天400次。可通过GAME_DAILY_CHAT_LIMIT和GAME_SESSION_CHAT_LIMIT调整前两项。
 
-可选真实AI：在游戏页顶部展开“连接真实AI”，使用已授权研究者账号登录，再在研究者设置中选择真实API并保存，开始新一遍。调用使用已配置的Supabase/DeepSeek后端，密钥不进网页。失败时沿用V0.6的明确模拟回退提示，实际回复来源写入每轮记录。
+游戏模型默认deepseek-flash，可用DEEPSEEK_MODEL覆盖；选择依据为当前DeepSeek官方API文档：https://api-docs.deepseek.com/ 。服务端仅将可见投喂记录、当前食谱及有长度限制的近期对话发给模型，不发送隐藏规则、测试答案或认证凭据。游戏规则及后测仍在前端，正式施测前还需迁移。
 
-源码来源和SHA-256见 `alien-zoo-source.json`。原对话ZIP中的HTML与单独下载的HTML已核对完全一致；公开的Q-3627试玩仓库是V0.5，未作为本版底稿。当前修改仅做原网址入口、研究者看板和安全AI代理适配，没有定稿新量表或新增正式实验材料。
+历史研究数据读取与下载继续只允许已确认的huangrui1008@gmail.com及服务器名单。旧报告端点保持原有研究者认证，历史数据未迁移或覆盖。
 
-任务形式参考 Kuhl等（2023）Alien Zoo。原项目：https://github.com/ukuhl/IntroAlienZoo ，CC BY 4.0。当前预览规则并非原论文验证的正式实验程序。
+## 开发与来源
 
-本地：`npm ci`、`npm test`、`python3 -m http.server 8765`。更多说明见 SETUP.md。
+运行npm test；静态预览可使用python3 -m http.server 8765。管理设置从研究者页面进入。原V0.6来源核对见alien-zoo-source.json；公开Q-3627示例为V0.5，未作为本版底稿。原项目：https://github.com/ukuhl/IntroAlienZoo，CC BY 4.0。当前改编不等同原论文已验证的正式程序。

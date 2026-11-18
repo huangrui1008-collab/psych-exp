@@ -26,6 +26,30 @@ main{max-width:1000px;margin:30px auto 36px}
 .conversation-card h2,.recipe-card h2{font-size:19px}
 .conversation-card .ai{margin-bottom:0}
 .conversation-card .ai p{line-height:1.85}
+.chat-log{min-height:130px;max-height:440px;overflow:auto;overscroll-behavior:contain;padding:6px 3px 12px;scroll-behavior:smooth}
+.chat-empty{padding:38px 18px;text-align:center;color:#718078;background:#f7f9f6;border:1px dashed #d5dfd4;border-radius:10px}
+.chat-message{max-width:92%;margin:12px 0;padding:15px 17px;border:1px solid #dce6dc;border-radius:12px;background:#f1f6f0}
+.chat-user{margin-left:auto;background:#e6efe9;border-color:#cbded0}
+.chat-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;color:#476355}
+.chat-meta span{font-size:12px;color:#75867a}
+.chat-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;margin:9px 0!important}
+.chat-message .recipe-mini{margin:10px 0}
+.chat-message [data-do=adopt]{margin-top:6px}
+.chat-message small.error{display:block;margin-top:8px}
+.chat-composer{border-top:1px solid #e4ebe2;padding-top:15px;margin-top:4px}
+.chat-composer textarea{display:block;width:100%;min-height:92px;max-height:230px;resize:vertical;border:1px solid #b9cdbf;border-radius:10px;padding:13px 15px;background:#fff;color:#20302a;line-height:1.7;font-size:16px}
+.chat-composer textarea:focus{outline:2px solid #83ae95;outline-offset:2px}
+.chat-composer .row{margin-top:11px}
+.chat-composer button{min-width:96px}
+.chat-ack{margin-top:15px;padding-top:14px;border-top:1px solid #e5ece4;font-size:14px}
+.chat-error:empty{display:none}
+.chat-error{color:#a32e23;font-size:14px;background:#fff4ef;padding:10px 12px;border-radius:8px;margin:8px 0;line-height:1.7}
+.chat-error button{margin:5px 0 0 8px;padding:6px 10px;font-size:13px}
+.chat-waiting{padding:14px 6px;color:#65766c;font-size:14px}
+.typing-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:#5d8970;margin-right:4px;animation:chat-pulse 1s infinite alternate}
+.typing-dot:nth-child(2){animation-delay:.2s}.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes chat-pulse{from{opacity:.25}to{opacity:1}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .recipe-card .plants{gap:12px;margin:20px 0}
 .recipe-card .plant{padding:17px 8px}
 .recipe-card .plant b{font-size:14px}
