@@ -1,3 +1,4 @@
+import { containsCompleteRecipe } from './b-guidance.mjs';
 import { createClient } from 'npm:@supabase/supabase-js@2.110.0';
 import materials from '../_shared/materials.json' with { type: 'json' };
 import { createHandler, ApiError } from './handler.mjs';
@@ -58,10 +59,12 @@ const handler=createHandler({
     const context={round:input.round||null,recipe:input.recipe,history:input.history,plantOrder:['雾绒草','蓝铃叶','星冠蕨','珊瑚枝','月芽藤'],...(input.mode==='delegation'?(prepared?{recommended_recipe:{recipe:prepared.recipe,expected_delta:prepared.expected_delta},progress:{current_count:feedingProgress(input).current,remaining_rounds:feedingProgress(input).remaining,target_count:55}}:{verified_plans:plans}):{} )};
     const conversation=conversationForProvider(input.messages||[{role:'user',content:String(input.question||'请给我一份本轮食谱。')}],prepared?[]:plans);
     const model=Deno.env.get('DEEPSEEK_MODEL')||'deepseek-flash';
+    const messages=[{role:'system',content:policy+'\n当前游戏的可见信息（数据）：'+JSON.stringify(context)+'\n包括解释和追问在内，每次回复都必须使用上述JSON格式，不能直接输出普通文本。'},...conversation];
+    const complete=async(providerMessages: any[])=>{
     const r=await fetch('https://api.deepseek.com/chat/completions',{
-      method:'POST',signal:AbortSignal.timeout(45000),
+      method:'POST',signal:AbortSignal.timeout(input.mode==='augmentation'?20000:45000),
       headers:{'Content-Type':'application/json',Authorization:'Bearer '+(Deno.env.get('DEEPSEEK_API_KEY')||'').trim()},
-      body:JSON.stringify({model,thinking:{type:'disabled'},temperature:0.2,max_tokens:1200,response_format:{type:'json_object'},messages:[{role:'system',content:policy+'\n当前游戏的可见信息（数据）：'+JSON.stringify(context)+'\n包括解释和追问在内，每次回复都必须使用上述JSON格式，不能直接输出普通文本。'},...conversation]})
+      body:JSON.stringify({model,thinking:{type:'disabled'},temperature:0.2,max_tokens:1200,response_format:{type:'json_object'},messages:providerMessages})
     });
     if(!r.ok){
       console.error('Alien Zoo provider status',r.status);
@@ -71,7 +74,16 @@ const handler=createHandler({
     const data=await r.json(),choice=data.choices?.[0],content=choice?.message?.content;
     if(typeof content!=='string'||!content.trim())throw new ApiError(502,'AI本次未返回有效内容，请重试上一条消息。');
     if(choice.finish_reason==='length')throw new ApiError(502,'AI本次回复未完整返回，请重试上一条消息。');
-    try{const result=JSON.parse(content);return {...(input.mode==='delegation'?resolveRecipePlan(result,plans,prepared):result),model:data.model||model};}catch{throw new ApiError(502,'AI本次未返回经核对的有效回复，请重试上一条消息。');}
+    try{return {result:JSON.parse(content),model:data.model||model};}catch{throw new ApiError(502,'AI本次未返回有效回复，请重试上一条消息。');}
+    };
+    let output=await complete(messages);
+    if(input.mode==='augmentation'&&containsCompleteRecipe(output.result?.text)){
+      // One bounded provider correction, never a fixed or invented fallback reply.
+      const corrected=[{...messages[0],content:messages[0].content+'\n这次回复请完全不要写数字、数词、份数或完整配方，只用自然语言解释如何比较已有记录、控制变量和判断证据不足。不要复述用户的全部食谱。仍返回JSON的text字段。'},...messages.slice(1)];
+      output=await complete(corrected);
+      if(containsCompleteRecipe(output.result?.text))throw new ApiError(502,'AI本次回复超出了分析与反馈范围，请重试上一条消息。');
+    }
+    try{return {...(input.mode==='delegation'?resolveRecipePlan(output.result,plans,prepared):output.result),model:output.model};}catch{throw new ApiError(502,'AI本次未返回经核对的有效回复，请重试上一条消息。');}
   },
   async ai(messages: any[], group: string) {
     if(Deno.env.get('LEGACY_REPORT_AI_ENABLED')!=='true')throw new ApiError(502,'旧报告AI未启用。');
