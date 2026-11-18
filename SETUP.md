@@ -1,5 +1,9 @@
 # Alien Zoo 真实对话连接说明
 
+## 安全暂停
+
+AI_CALLS_ENABLED默认关闭。仅在实验专用密钥与调用预算配置完成后，才可将其设置为true恢复模型调用。密钥只保存在Supabase后台，不放进源码、网页或聊天；网站限额不等于供应商账户的金额上限。
+
 ## 已有配置
 
 继续使用原GitHub Pages与Supabase项目moryybvgocdtevhmaqyd。所需DEEPSEEK_API_KEY和Supabase运行时密钥均留在服务器，不需要填写到游戏页面，也不要写入仓库或聊天。游戏默认模型为deepseek-flash，DEEPSEEK_MODEL可覆盖。
