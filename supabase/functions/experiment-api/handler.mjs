@@ -1,3 +1,4 @@
+import { createGameChatRouter } from './game-chat.mjs';
 export class ApiError extends Error {
   constructor(status, message) { super(message); this.status = status; }
 }
@@ -44,10 +45,11 @@ export function validateRecord(input, step, m, complete = false) {
   }
   return result;
 }
-export function createHandler({store, materials:m, auth, ai, gameAI, ready, origins, dailyStarts=1000, dailyChats=500, selfTestOnly=true}) {
+export function createHandler({store, materials:m, auth, ai, gameAI, gameCapabilities, gameDailyLimit=200, gameSessionLimit=60, ready, origins, dailyStarts=1000, dailyChats=500, selfTestOnly=true}) {
+  const gameChat=createGameChatRouter({store,ready,ai:gameAI,capabilities:gameCapabilities,dailyLimit:gameDailyLimit,sessionLimit:gameSessionLimit});
   return async req => {
     const origin=req.headers.get('Origin');
-    const cors={'Vary':'Origin','Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization, apikey, X-Session-Token','Access-Control-Max-Age':'600','Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'};
+    const cors={'Vary':'Origin','Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization, apikey, X-Session-Token, X-Game-Token','Access-Control-Max-Age':'600','Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'};
     if (origin && !origins.includes(origin)) return new Response(JSON.stringify({error:'来源未获允许'}),{status:403,headers:cors});
     if (origin) cors['Access-Control-Allow-Origin']=origin;
     const response=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:cors});
@@ -62,6 +64,7 @@ export function createHandler({store, materials:m, auth, ai, gameAI, ready, orig
       if (req.method==='OPTIONS') return new Response(null,{status:204,headers:cors});
       const route=new URL(req.url).pathname.split('/experiment-api')[1] || '/';
       const u=new URL(req.url);
+      if(route.startsWith('/game/'))return gameChat(req,route,cors);
       if (route==='/health' && req.method==='GET') {
         if (!await ready()) fail(503,'研究服务尚未完成安全设置');
         return response({ready:true,version:'study2-report-v2',mode:selfTestOnly?'researcher-self-test':'study'});
