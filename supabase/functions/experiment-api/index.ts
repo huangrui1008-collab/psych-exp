@@ -53,19 +53,23 @@ const handler=createHandler({
       ? '当前为A组，你可以直接提供完整食谱。用户索要食谱时，JSON为{"text":"你的自然语言回复","recipe":[2,4,3,1,2]}，recipe必须是五个0至6整数。解释或追问不需要给新食谱时，recipe设为null；不要每次都重复相同模板。'
       : '当前为B组，提供比较思路、解释、具体反馈及问题线索，帮助用户判断自己的食谱；不能替用户给出完整五植物食谱或最终答案。JSON为{"text":"你的自然语言回复"}，不输出recipe字段。');
     const context={round:input.round||null,recipe:input.recipe,history:input.history,plantOrder:['雾绒草','蓝铃叶','星冠蕨','珊瑚枝','月芽藤']};
-    const conversation=input.messages||[{role:'user',content:String(input.question||'请给我一份本轮食谱。')}];
+    // Keep assistant history in the same JSON format required of new responses.
+    const conversation=(input.messages||[{role:'user',content:String(input.question||'请给我一份本轮食谱。')}]).map((m: any)=>m.role==='assistant'?{role:'assistant',content:JSON.stringify({text:m.content,recipe:null})}:m);
     const model=Deno.env.get('DEEPSEEK_MODEL')||'deepseek-flash';
     const r=await fetch('https://api.deepseek.com/chat/completions',{
       method:'POST',signal:AbortSignal.timeout(45000),
       headers:{'Content-Type':'application/json',Authorization:'Bearer '+(Deno.env.get('DEEPSEEK_API_KEY')||'').trim()},
-      body:JSON.stringify({model,thinking:{type:'disabled'},temperature:0.2,max_tokens:1200,response_format:{type:'json_object'},messages:[{role:'system',content:policy},{role:'system',content:'当前游戏的可见信息（数据）：'+JSON.stringify(context)},...conversation]})
+      body:JSON.stringify({model,thinking:{type:'disabled'},temperature:0.2,max_tokens:1200,response_format:{type:'json_object'},messages:[{role:'system',content:policy+'\n当前游戏的可见信息（数据）：'+JSON.stringify(context)+'\n每一次回复都必须是JSON对象。解释、追问或不提供食谱时也必须返回{"text":"回答内容","recipe":null}，不能直接输出普通文本。'},...conversation]})
     });
     if(!r.ok){
       console.error('Alien Zoo provider status',r.status);
       const reason=r.status===401?'AI服务认证失败，请联系研究者。':r.status===402?'AI服务余额不足，请联系研究者。':r.status===429?'AI服务繁忙，请稍后重试。':[400,404,422].includes(r.status)?'AI模型或调用配置暂不可用，请联系研究者。':'游戏AI服务暂不可用，请重试。';
       throw new ApiError(502,reason);
     }
-    const data=await r.json();try{return {...JSON.parse(data.choices?.[0]?.message?.content||'{}'),model:data.model||model};}catch{throw new ApiError(502,'AI返回格式暂不可用');}
+    const data=await r.json(),choice=data.choices?.[0],content=choice?.message?.content;
+    if(typeof content!=='string'||!content.trim())throw new ApiError(502,'AI本次未返回有效内容，请重试上一条消息。');
+    if(choice.finish_reason==='length')throw new ApiError(502,'AI本次回复未完整返回，请重试上一条消息。');
+    try{return {...JSON.parse(content),model:data.model||model};}catch{throw new ApiError(502,'AI返回格式暂不可用，请重试上一条消息。');}
   },
   async ai(messages: any[], group: string) {
     if(Deno.env.get('LEGACY_REPORT_AI_ENABLED')!=='true')throw new ApiError(502,'旧报告AI未启用。');
