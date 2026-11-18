@@ -60,7 +60,7 @@ export function createGameChatRouter({store,ready,ai,capabilities,enabled=()=>tr
       const result=await ai({mode:access.mode,round:b.round,difficulty:gameDifficulty(b),recipe:b.recipe,messages,history:b.history.map(r=>({id:String(r.id||'R').slice(0,20),x:r.x,delta:r.delta}))});
       if(!result||typeof result.text!=='string'||!result.text.trim())reject(502,'AI暂未返回有效回复，请重试。');
       if(access.mode==='delegation'&&result.recipe!=null&&!recipe(result.recipe))reject(502,'AI食谱格式暂不可用，请重新询问。');
-      return response({text:result.text.trim().slice(0,2400),...(access.mode==='delegation'&&recipe(result.recipe)?{recipe:result.recipe}:{}),...(access.mode==='delegation'&&recipe(result.recipe)&&Number.isInteger(result.expected_delta)?{expected_delta:result.expected_delta,recipe_rule_version:result.recipe_rule_version}:{}),source:'real',model:typeof result.model==='string'?result.model.slice(0,100):null});
+      return response({text:result.text.trim().slice(0,2400),...(access.mode==='delegation'&&recipe(result.recipe)?{recipe:result.recipe}:{}),...(access.mode==='delegation'&&recipe(result.recipe)&&Number.isInteger(result.expected_delta)?{expected_delta:result.expected_delta,recipe_rule_version:result.recipe_rule_version,recipe_strategy_version:result.recipe_strategy_version}:{}),source:'real',model:typeof result.model==='string'?result.model.slice(0,100):null});
     }catch(e){
       if(e instanceof ChatError)return response({error:e.message},e.status);
       // The provider adapter throws only controlled, non-secret messages.
