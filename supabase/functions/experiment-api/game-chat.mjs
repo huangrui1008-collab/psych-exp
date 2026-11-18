@@ -25,11 +25,12 @@ export function createGameCapabilities(secret,now=()=>Date.now()){
 class ChatError extends Error{constructor(status,message){super(message);this.status=status;}}
 const reject=(status,message)=>{throw new ChatError(status,message);};
 const recipe=x=>Array.isArray(x)&&x.length===5&&x.every(n=>Number.isInteger(n)&&n>=0&&n<=6);
-export function createGameChatRouter({store,ready,ai,capabilities,dailyLimit=200,sessionLimit=60,now=()=>Date.now()}){
+export function createGameChatRouter({store,ready,ai,capabilities,enabled=()=>true,dailyLimit=200,sessionLimit=60,now=()=>Date.now()}){
   return async(req,route,headers)=>{
     const response=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
     try{
       if(req.method!=='POST')reject(405,'方法不受支持');
+      if(!enabled())reject(503,'AI调用已暂停，请联系研究者。');
       if(!capabilities||!ai||!await ready())reject(503,'AI连接尚未准备好，请稍后重试。');
       if(!['/game/access','/game/chat'].includes(route))reject(404,'接口不存在');
       const raw=await req.text();if(raw.length>50000)reject(413,'本次对话过长，请缩短问题。');

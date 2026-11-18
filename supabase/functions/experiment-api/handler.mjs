@@ -45,8 +45,8 @@ export function validateRecord(input, step, m, complete = false) {
   }
   return result;
 }
-export function createHandler({store, materials:m, auth, ai, gameAI, gameCapabilities, gameDailyLimit=200, gameSessionLimit=60, ready, origins, dailyStarts=1000, dailyChats=500, selfTestOnly=true}) {
-  const gameChat=createGameChatRouter({store,ready,ai:gameAI,capabilities:gameCapabilities,dailyLimit:gameDailyLimit,sessionLimit:gameSessionLimit});
+export function createHandler({store, materials:m, auth, ai, gameAI, gameCapabilities, gameEnabled=()=>true, gameDailyLimit=200, gameSessionLimit=60, ready, origins, dailyStarts=1000, dailyChats=500, selfTestOnly=true}) {
+  const gameChat=createGameChatRouter({store,ready,ai:gameAI,capabilities:gameCapabilities,enabled:gameEnabled,dailyLimit:gameDailyLimit,sessionLimit:gameSessionLimit});
   return async req => {
     const origin=req.headers.get('Origin');
     const cors={'Vary':'Origin','Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization, apikey, X-Session-Token, X-Game-Token','Access-Control-Max-Age':'600','Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'};
