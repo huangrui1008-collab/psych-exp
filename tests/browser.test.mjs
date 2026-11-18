@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import test from 'node:test';import assert from 'node:assert/strict';
 import {browser,fixture,settle,tick} from './helpers.mjs';
 import {createGameCapabilities} from '../supabase/functions/experiment-api/game-chat.mjs';
@@ -49,7 +50,7 @@ test('free-text chat sends context, adopts recipes, keeps tokens out of exports 
   press(b,'start');assert.equal(calls.length,0);assert.equal(b.document.getElementById('aiAck'),null);
   await send(b,'给我一份本轮食谱。');await send(b,'为什么选择蓝铃叶4份？');
   const chats=calls.filter(([u])=>u.endsWith('/game/chat'));assert.equal(chats.length,2);
-  const second=JSON.parse(chats[1][1].body);assert.equal(second.messages.length,3);assert.equal(second.messages.at(-1).content,'为什么选择蓝铃叶4份？');assert.equal(chats[1][1].headers['X-Game-Token'],'test-game-token');
+  const second=JSON.parse(chats[1][1].body);assert.equal(second.messages.length,3);assert.match(second.messages[1].content,/\[2,4,3,1,2\]/);assert.equal(second.messages.at(-1).content,'为什么选择蓝铃叶4份？');assert.equal(chats[1][1].headers['X-Game-Token'],'test-game-token');
   assert.ok(chats[1][0].startsWith('https://moryybvgocdtevhmaqyd.supabase.co/'));assert.ok(!JSON.stringify(Object.fromEntries(Object.entries(b.w.localStorage))).includes('test-game-token'));
   press(b,'adopt');assert.deepEqual([...b.document.querySelectorAll('.plant input')].map(x=>Number(x.value)),[2,4,3,1,2]);
   const ack=b.document.getElementById('aiAck');ack.checked=true;ack.dispatchEvent(new b.w.Event('change',{bubbles:true}));press(b,'feed');press(b,'next');
@@ -118,4 +119,21 @@ test('game capabilities expire and real-chat quotas stop provider calls',async()
  const sid=crypto.randomUUID(),base={session_id:sid,mode:'delegation'},access=await f.request('/game/access',base),t=(await access.json()).token;
  const body={...base,round:1,recipe:[0,0,0,0,0],history:[],messages:[{role:'user',content:'你好'}]};
  assert.equal((await f.request('/game/chat',body,'',{'X-Game-Token':t})).status,200);assert.equal((await f.request('/game/chat',body,'',{'X-Game-Token':t})).status,429);assert.equal(calls,1);
+});
+
+test('AI emergency pause stops game access and chat before quota or provider work',async()=>{
+ let calls=0;const cap=createGameCapabilities('pause-test'),sid=crypto.randomUUID();
+ const f=fixture({gameCapabilities:cap,gameEnabled:()=>false,gameAI:async()=>{calls++;return {text:'must not run'};}});
+ const base={session_id:sid,mode:'delegation'};
+ const access=await f.request('/game/access',base);assert.equal(access.status,503);assert.match((await access.json()).error,/已暂停/);
+ const token=await cap.issue(sid,'delegation');const chat=await f.request('/game/chat',{...base,round:1,recipe:[0,0,0,0,0],history:[],messages:[{role:'user',content:'must not be sent'}]},'',{'X-Game-Token':token});
+ assert.equal(chat.status,503);assert.equal(calls,0);assert.equal(f.store.quotas.size,0);
+});
+
+test('public browser assets contain no literal provider key or direct provider request',()=>{
+ for(const file of ['index.html','alien-zoo.js','config.js']){
+  const text=fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
+  assert.equal(/sk-[a-f0-9]{32}/i.test(text),false,file+' must not embed a provider key');
+  assert.equal(text.includes('api.deepseek.com/chat/completions'),false,file+' must use the server proxy');
+ }
 });
