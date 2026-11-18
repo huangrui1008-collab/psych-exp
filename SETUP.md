@@ -25,3 +25,7 @@ POST /game/access：提交游戏会话UUID和组别，签发两小时有效的�
 ## 检查与部署
 
 npm test覆盖A/B全流程、连续对话、IME键盘操作、一键填入、失败重试、游戏凭据签名/失效/组别绑定、配额与研究数据隔离。后端源文件为supabase/functions/experiment-api/index.ts、handler.mjs、game-chat.mjs；前端为index.html、alien-zoo.js和participant.css。部署保持原项目和既有数据。
+
+## A组高收益食谱
+
+游戏请求传difficulty（basic或advanced），旧客户端根据未改动的H1记录识别难度，缺少可识别记录时缺省advanced。用户索要食谱时，game-plans.mjs先按原规则计算高收益候选并按轮次选定一份，由模型解释；自由追问可选择候选plan_id或仅回答问题。服务器校验后返回recipe、expected_delta和recipe_rule_version。进阶增量8、基础增量6；不改变客户端投喂规则或初始示例，不发送后测答案。B组不接收此候选工具，仍只给分析线索。模型未选择有效候选时明确报错，不悄悄替换为固定回复。游戏数据仍在本机，历史记录不重算。
