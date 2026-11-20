@@ -1,0 +1,16 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {browser,enterGame} from './helpers.mjs';
+const key='az-flow-v1-session-A';const read=b=>JSON.parse(b.w.localStorage.getItem(key));const noCalls=async()=>{throw Error('No automatic network calls allowed');};
+
+test('cancelling exit leaves the current game and saved record unchanged',()=>{const b=browser('index',noCalls,{url:'https://huangrui1008-collab.github.io/psych-exp/?group=A'});try{enterGame(b);const before=b.w.localStorage.getItem(key);b.w.confirm=()=>false;b.document.querySelector('[data-do=exit]').click();assert.equal(b.w.localStorage.getItem(key),before);assert.equal(read(b).stage,'play');assert.ok(b.document.getElementById('chatInput'));}finally{b.close();}});
+
+test('already-exited records from the previous deployment resume via exit events without resetting identity, group, progress or saved answers',()=>{
+ const original=browser('index',noCalls,{url:'https://huangrui1008-collab.github.io/psych-exp/?group=A'});let state;
+ try{enterGame(original);state=read(original);}finally{original.close();}
+ for(const stage of ['play','feedback','test','self_assessment']){
+  const s=structuredClone(state);s.stage='exited';s.flow_status='exited';s.rounds=[{id:'R1',x:[2,3,3,2,2],delta:4,before:20,after:24}];s.pack=24;s.draft=[1,4,2,3,1];s.chatDraft='尚未发送的追问';s.chatHistory=[{id:'m1',role:'assistant',content:'之前的真实回复',source:'real',round:1,status:'sent'}];s.tests={phase:'relevance',answers:{q0:'增加',q1:'减少'}};s.events.push({type:'session_exited',from:stage,time:'2026-11-19T10:00:00Z'});delete s.exit_info;s.flow_current=stage==='test'?'independent_test':stage==='self_assessment'?'self_assessment':'feeding_game';s.flow_steps[s.flow_current].status='exited';
+  const b=browser('index',noCalls,{url:'https://huangrui1008-collab.github.io/psych-exp/?group=A',local:{[key]:JSON.stringify(s)}});
+  try{assert.equal(read(b).stage,'exited');b.document.querySelector('[data-do=recover-exit]').click();const restored=read(b);assert.equal(restored.stage,stage);for(const field of ['id','mode','rounds','pack','draft','chatDraft','chatHistory','tests','consent'])assert.deepEqual(restored[field],s[field]);assert.equal(restored.interruptions.length,1);assert.ok(restored.events.some(e=>e.type==='session_exited'));assert.equal(restored.events.at(-1).type,'session_resumed_after_exit');assert.equal(b.document.querySelector('[data-do=recover-exit]'),null);assert.deepEqual(b.errors,[]);}finally{b.close();}
+ }
+});
+
+test('new exits retain recovery metadata; missing exit origin is not guessed',()=>{const b=browser('index',noCalls,{url:'https://huangrui1008-collab.github.io/psych-exp/?group=A'});try{enterGame(b);b.document.querySelector('[data-do=exit]').click();assert.equal(read(b).exit_info.from,'play');assert.equal(read(b).stage,'exited');assert.ok(b.document.querySelector('[data-do=recover-exit]'));const lost=read(b);lost.events=[];lost.exit_info=null;const other=browser('index',noCalls,{url:'https://huangrui1008-collab.github.io/psych-exp/?group=A',local:{[key]:JSON.stringify(lost)}});try{assert.equal(other.document.querySelector('[data-do=recover-exit]'),null);assert.equal(read(other).stage,'exited');}finally{other.close();}}finally{b.close();}});
