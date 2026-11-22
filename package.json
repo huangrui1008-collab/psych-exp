@@ -1,1 +1,1 @@
-{"name":"psych-exp-checks","private":true,"type":"module","scripts":{"test":"node --test tests/*.test.mjs"},"devDependencies":{"jsdom":"26.1.0","@electric-sql/pglite":"0.3.14"}}
+{"name":"psych-exp-checks","private":true,"type":"module","scripts":{"test":"node --test tests/*.test.mjs","preview":"node scripts/local-preview.mjs"},"devDependencies":{"jsdom":"26.1.0","@electric-sql/pglite":"0.3.14"}}
