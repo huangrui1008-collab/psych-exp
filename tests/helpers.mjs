@@ -28,11 +28,12 @@ export function fullRecord(){
 }
 export const tick=()=>new Promise(resolve=>setTimeout(resolve,15));
 export async function settle(predicate){for(let i=0;i<80;i++){if(predicate())return;await tick();}throw new Error('Timed out waiting for expected UI state');}
-export function browser(name,fetcher,{url='https://huangrui1008-collab.github.io/psych-exp/',session={},local={}}={}) {
+export function browser(name,fetcher,{url='https://huangrui1008-collab.github.io/psych-exp/',session={},local={},mediaMatch=null}={}) {
   const errors=[];const vc=new VirtualConsole();vc.on('jsdomError',e=>errors.push(e));
   const html=fs.readFileSync(new URL('../'+name+'.html',import.meta.url),'utf8').replace(/<script[^>]+src=[^>]+><\/script>/g,'');
   const dom=new JSDOM(html,{url,runScripts:'dangerously',virtualConsole:vc});const w=dom.window;
   w.fetch=fetcher;w.AbortSignal=AbortSignal;w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};
+  if(typeof mediaMatch==='boolean'){const media=new w.EventTarget();media.matches=mediaMatch;media.media='(max-width: 720px)';w.matchMedia=query=>query==null||query===media.media?media:{matches:false};}
   for(const [k,v]of Object.entries(session))w.sessionStorage.setItem(k,v);
   for(const [k,v]of Object.entries(local))w.localStorage.setItem(k,v);
   const captures=[];w.URL.createObjectURL=b=>{captures.push(b);return 'blob:test';};w.URL.revokeObjectURL=()=>{};w.HTMLAnchorElement.prototype.click=()=>{};

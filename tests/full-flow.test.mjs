@@ -1,11 +1,11 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {browser,settle,tick} from './helpers.mjs';
-const steps=['consent','ai_literacy','feeding_game','independent_test','self_assessment','manipulation_check','agency','visual_difference','psychological_ownership','learning_gain'];
-const labels=['知情同意','AI素养','喂养游戏','独立测试','自我评估','操纵检验','代理感','图形找不同','心理所有权','学习获得感'];
+const steps=['consent','ai_literacy','feeding_game','independent_test','self_assessment','manipulation_check','agency','visual_difference','final_recipe_selection','final_recipe_display','psychological_ownership','learning_gain'];
+const labels=['知情同意','AI素养','喂养游戏','独立测试','自我评估','操纵检验','代理感','图形找不同','最终食谱选择','最终食谱展示','心理所有权','学习获得感'];
 const key=g=>'az-flow-v1-session-'+g;
 const read=(b,g)=>JSON.parse(b.w.localStorage.getItem(key(g)));
 
-test('A and B traverse the exact ten-step flow; placeholders never become consent, answers or scores; AI appears only in game',async()=>{
+test('A and B traverse the original flow plus two recipe steps; placeholders never become consent, answers or scores; AI appears only in game',async()=>{
  for(const group of ['A','B']){
   let calls=0;const b=browser('index',async(url,init)=>{calls++;if(String(url).endsWith('/game/access'))return new Response(JSON.stringify({token:'test-only',expires_in:7200}));return new Response(JSON.stringify({text:'测试模型回应',source:'real',...(group==='A'?{recipe:[2,4,3,1,2]}:{})}));},{url:'https://huangrui1008-collab.github.io/psych-exp/?group='+group});
   const visited=[];
@@ -23,10 +23,10 @@ test('A and B traverse the exact ten-step flow; placeholders never become consen
    }
    assert.equal(read(b,group).stage,'self_assessment');assert.doesNotMatch(b.document.getElementById('app').textContent,/食谱判断 \d|植物判断 \d|规律判断 \d/);
    const before=calls;
-   for(let i=4;i<10;i++){
-    const state=read(b,group);visited.push(state.flow_current);assert.equal(state.flow_current,steps[i]);assert.match(b.document.querySelector('h2').textContent,new RegExp(labels[i]));assert.equal(b.document.getElementById('chatInput'),null);assert.equal(b.document.querySelectorAll('#app input,#app textarea,#app select').length,0);assert.match(b.document.getElementById('app').textContent,/占位/);
-    const resumed=browser('index',async()=>{throw Error('no request expected')},{url:'https://huangrui1008-collab.github.io/psych-exp/?group='+group,local:Object.fromEntries(Object.entries(b.w.localStorage))});try{assert.match(resumed.document.querySelector('h2').textContent,new RegExp(labels[i]));assert.equal(read(resumed,group).id,state.id);}finally{resumed.close();}
-    b.document.querySelector('[data-do=flow-next]').click();
+   for(let i=4;i<12;i++){
+    const state=read(b,group);visited.push(state.flow_current);assert.equal(state.flow_current,steps[i]);assert.match(b.document.querySelector(steps[i]==='psychological_ownership'?'.flow-placeholder h2':'h2').textContent,new RegExp(steps[i]==='final_recipe_display'?'最终提交的食谱':labels[i]));assert.equal(b.document.getElementById('chatInput'),null);if(!['final_recipe_selection','final_recipe_display'].includes(steps[i])){assert.equal(b.document.querySelectorAll('#app input,#app textarea,#app select').length,0);assert.match(b.document.getElementById('app').textContent,/占位/);}
+    const resumed=browser('index',async()=>{throw Error('no request expected')},{url:'https://huangrui1008-collab.github.io/psych-exp/?group='+group,local:Object.fromEntries(Object.entries(b.w.localStorage))});try{assert.match(resumed.document.querySelector(steps[i]==='psychological_ownership'?'.flow-placeholder h2':'h2').textContent,new RegExp(steps[i]==='final_recipe_display'?'最终提交的食谱':labels[i]));assert.equal(read(resumed,group).id,state.id);}finally{resumed.close();}
+    if(steps[i]==='final_recipe_selection'){const choice=b.document.querySelector('[name=final_recipe_round][value=7]');choice.checked=true;choice.dispatchEvent(new b.w.Event('change',{bubbles:true}));b.document.getElementById('finalRecipeForm').dispatchEvent(new b.w.Event('submit',{cancelable:true}));}else if(steps[i]==='final_recipe_display'){await new Promise(resolve=>setTimeout(resolve,1550));b.document.querySelector('[data-do=recipe-display-next]').click();}else b.document.querySelector('[data-do=flow-next]').click();
    }
    assert.equal(calls,before);assert.deepEqual(visited,steps);const final=read(b,group);assert.equal(final.stage,'done');assert.equal(final.flow_status,'walkthrough_complete_with_placeholders');assert.equal(final.consent.obtained,false);assert.equal(Object.values(final.flow_steps).filter(x=>x.status==='placeholder_passed').length,8);
    for(const step of Object.values(final.flow_steps)){assert.ok(step.entered_at&&step.exited_at);if(step.placeholder){assert.equal(step.responses,null);assert.equal(step.score,null);}}

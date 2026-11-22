@@ -26,6 +26,9 @@ async function completeGame(b){
   form.dispatchEvent(new b.w.Event('submit',{cancelable:true}));
  }
  while(b.document.querySelector('[data-do=flow-next]'))b.document.querySelector('[data-do=flow-next]').click();
+ const choice=b.document.querySelector('[name=final_recipe_round][value=2]');choice.checked=true;choice.dispatchEvent(new b.w.Event('change',{bubbles:true}));b.document.getElementById('finalRecipeForm').dispatchEvent(new b.w.Event('submit',{cancelable:true}));
+ await new Promise(resolve=>setTimeout(resolve,1550));press(b,'recipe-display-next');
+ while(b.document.querySelector('[data-do=flow-next]'))b.document.querySelector('[data-do=flow-next]').click();
  assert.equal(game(b).stage,'done');assert.equal(game(b).rounds.length,10);assert.equal(game(b).is_test,true);
  assert.match(b.document.getElementById('app').textContent,/本次流程核对结束/);
  assert.equal(b.document.querySelector('[data-do=reset]'),null);assert.deepEqual(b.errors,[]);
@@ -79,9 +82,9 @@ test('participant layout follows the requested order and root assignment exists 
  const a=browser('index',chatNetwork,{url:'https://huangrui1008-collab.github.io/psych-exp/?group=A'});try{
   press(a,'start');await send(a,'给我食谱。');
   const sections=[...a.document.getElementById('app').children].map(x=>x.className);
-  assert.deepEqual(sections,['row between round-heading','goal','card history-card','card animal-card','card conversation-card','card recipe-card']);
+  assert.deepEqual(sections,['row between round-heading','goal','card history-card','card conversation-card chat-sheet-card','card recipe-card','card feeding-card','card animal-card']);
   assert.equal(a.document.querySelector('.animal-card small').textContent.trim(),'只');
-  assert.match(a.document.querySelector('.animal-card').textContent,/每个小图案代表1只。/);
+  assert.doesNotMatch(a.document.querySelector('.animal-card').textContent,/每个小图案代表1只/);
   assert.doesNotMatch(a.document.getElementById('app').textContent,/试玩|预览|数量增加或减少会直观变化/);
   press(a,'adopt');assert.deepEqual([...a.document.querySelectorAll('.plant input')].map(x=>Number(x.value)),game(a).ai.recipe);
   assert.equal(a.document.querySelector('[data-do=feed]').disabled,true);
