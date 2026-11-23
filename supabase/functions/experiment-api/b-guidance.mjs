@@ -13,7 +13,7 @@ export function containsCompleteRecipe(text){
 // Provider-only teaching context. Knowledge is shared with the existing rule engine,
 // while the participant still chooses the complete next recipe.
 import {recipeOutcome,gameDifficulty,RECIPE_RULE_VERSION} from './game-plans.mjs';
-export const B_GUIDANCE_VERSION='b-evidence-dialogue-v4.1';
+export const B_GUIDANCE_VERSION='b-evidence-dialogue-v5';
 export const B_GUIDANCE_POLICY=`你是外星饲养站中的学习助手，帮助用户理解规律、比较真实结果并决定自己的食谱。食谱前、填写中、投喂后均可讨论；无需先交食谱或理由才能获得解释。
 【每次先读事实】紧随近期对话提供的“本次核对事实”包含最新完整历史、上一轮、当前数量、剩余次数、达标上限及暂选状态。以它为准，旧助手回复只是对话，不是规则或记录证据。不要顺着旧回复重复错误；必要时明确、简短纠正。用户说“现在呢”“这一轮”时，直接根据最新记录回答，不再要求其抄回已经有的份数。缺少或不一致的信息才说明不确定。
 【真正回答问题】先回应用户当前困惑，再解释对应原因。少用“主项、系数、修正”等术语；先用日常语言讲清“同样的蓝铃叶，在不同珊瑚枝份数下，结果可能不同”。用户问具体含义或仍不理解时，给必要的局部数字和条件，不反复说“少量、调一档、控制变量、试试看”。“一档”若被问到，直接解释界面相邻份数相差1份，不用“不能给具体份数”回避。“上次的量”优先指最新实际投喂记录，不能把你上一条建议的量当成已经使用的量；必要时明确区分两者。没有缺失信息就不必每次以反问结束。先在内部判断这次追问与上次有什么不同，再给对应的新解释，不输出内部推理。
@@ -86,9 +86,25 @@ export function bProviderFacts(support){
   const pairs=support.history_comparisons.changed_only_irrelevant_plants.map(pair=>`${pair.rounds.join('与')}只改变了${pair.changed_only_irrelevant_plants.map(i=>names[i]).join('、')}，有效植物条件相同，原规则增减相同。`);
   return `【当前进度】${progress}\n【已执行历史，明确名称对应份数】\n${lines.join('\n')||'尚未投喂。'}\n【上一轮】${latest?latest.round+'是最新完成的上一轮；实际使用：'+Object.entries(latest.active_plant_values).map(([name,n])=>name+'='+n+'份').join('，')+'。这才是上次实际用量，不是之前助手建议的份数。':'没有已完成的上一轮。'}\n【当前草稿】状态=${selection.status}；${selected}；尚未执行。\n【历史对照】${pairs.join(' ')||'没有只改无关植物的对照。'}连续${support.history_comparisons.consecutive_nonpositive_rule_results}轮原规则非正收益。当前完整暂选曾用在：${support.history_comparisons.already_tried_current_draft.join('、')||'无或尚未完整选择'}。\n【已核对的规则知识】${support.verified_rule_knowledge.reading_notes}\n${support.verified_rule_knowledge.population_floor}\n注意：按每个植物名称读取份数，不用数字顺序猜。三种有效植物全0不代表五种食物全0，检查其他植物后才能说整份全0。无关植物不引发减量。`;
 }
+export function bTurnFocus(question,support){
+  const q=String(question||''),latest=support.latest_completed_round;
+  if(/一档|什么意思|调多少|具体怎么/.test(q))return {kind:'operation_clarification',instruction:'只解释用户问的操作或术语。相邻份数差1份；区分上一轮实际用量与先前助手建议，引用最新实际记录，不把建议当作已执行。不要再列整套喂养建议或重复目标进度。'};
+  if(/早.{0,5}试|已经.{0,5}试|试过|不行/.test(q))return {kind:'review_existing_trial',instruction:'先承认并准确定位已有尝试，用最近实际食谱解释为什么这个条件下没增长。不要反驳用户说没试过，不再要求其抄记录，不重复推销之前的同一套建议。'};
+  if(/养死|一只.{0,6}没有|快.{0,3}死|都.{0,3}死/.test(q))return {kind:'distress_and_progress',instruction:'客观承认当前局面，准确给当前数量与目标是否仍可达；结合最近实际结果解释一个未解决条件，说明剩余仍可观察学习。不命令改好几种份数，不空泛安慰或制造挫败。'};
+  if(/来得及|十轮|只有.{0,5}轮|达标|目标/.test(q))return {kind:'progress',instruction:'直接用已核对进度回应时间与达标问题，区分理论上限、所需平均增量与实际保证。不要把回答又变成三种植物的份数清单。'};
+  if(/直接.{0,8}食谱|给我.{0,5}食谱/.test(q))return {kind:'boundary_with_teaching',instruction:'用一句话说明完整组合由用户决定，随后只解释一个有用的搭配关系，帮助形成判断。不要只是拒绝，也不要列一套接近完整配方的建议。'};
+  if(/食谱.{0,8}(看看|建议)|看看.{0,8}建议|这.{0,3}食谱/.test(q))return {kind:'draft_review',instruction:'根据明确暂选分析依据和风险。暂选未知时如实说明，但可直接结合已完成记录解释一个条件，不让用户先交整份食谱才帮忙。不要每次复制三种植物建议。'};
+  if(/上轮|上次|仍.{0,4}减少|又.{0,4}减少/.test(q))return {kind:'latest_result_explanation',instruction:'直接用最新已执行记录解释本次追问，区分植物自身无用与搭配条件未生效；引用正确轮次和份数。重点是为什么，不重复一整套下一轮改法。'};
+  if(/只改|尝试哪|试哪/.test(q))return {kind:'one_relation',instruction:'只选择一个值得理解或比较的关系并解释理由。不要回答只改一个却同时要求调整三种植物；允许局部数值解释，但不唯一确定下一轮整份配方。'};
+  if(/更.{0,3}好|怎么办/.test(q))return {kind:'improve_understanding',instruction:'提供比上一条更具体的新解释，比如控制变量不等于单独喂一种、搭配存在转折。不要复述同一组份数建议，也不重复已讲过的进度。'};
+  const pair=support.history_comparisons.changed_only_irrelevant_plants.filter(p=>p.rounds.includes(latest?.round)).at(-1);
+  if(pair)return {kind:'compare_irrelevant_changes',instruction:'本次优先对照'+pair.rounds.join('与')+'：只改变不参与规则的植物，结果为何没有改善。明确指出对照，不再机械罗列下一轮三种植物建议。'};
+  if(latest)return {kind:'latest_condition',instruction:'根据最近一轮提供一个有针对性的原因或比较方向，接住此前疑问，不复制之前三种植物的份数建议。未被问到且没有必要时不重复目标进度。'};
+  return {kind:'starting_help',instruction:'没有投喂记录也直接提供一个有价值的起步解释；针对用户的问题说明植物作用或搭配，不一次倾倒所有数值，不要求先填食谱。'};
+}
 export function bProviderMessages(input,common,conversation,support=bGuidanceContext(input)){
   const latest=conversation.at(-1);
-  return [{role:'system',content:common+B_GUIDANCE_POLICY},...conversation.slice(0,-1),{role:'system',content:'本次核对事实（仅此为记录与规则依据，早先助手可能错误或过时）：\n'+bProviderFacts(support)+'\n紧随其后的用户问题是本次要回答的问题。先核对明确名称对应的份数、最新一轮和目标状态，再自然回答；不要复述资料格式。每次仍只返回JSON的text字段。'},latest];
+  return [{role:'system',content:common+B_GUIDANCE_POLICY},...conversation.slice(0,-1),{role:'system',content:'本次核对事实（仅此为记录与规则依据，早先助手可能错误或过时）：\n'+bProviderFacts(support)+'\n【这次回应的重点】'+bTurnFocus(latest?.content,support).instruction+'\n紧随其后的用户问题是本次要回答的问题。先核对明确名称对应的份数、最新一轮和目标状态，再自然回答；不要复述资料格式。每次仍只返回JSON的text字段。'},latest];
 }
 
 // Common direct completion formats are checked, not every possible semantic evasion.
