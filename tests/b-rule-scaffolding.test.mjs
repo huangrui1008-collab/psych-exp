@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import * as plans from '../supabase/functions/experiment-api/game-plans.mjs';
 import {ApiError} from '../supabase/functions/experiment-api/handler.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';
-import {B_GUIDANCE_POLICY,B_GUIDANCE_VERSION,bGuidanceContext,bSelectionContext,completeBGuidance,containsBDelegation} from '../supabase/functions/experiment-api/b-guidance.mjs';
+import {B_GUIDANCE_POLICY,B_GUIDANCE_VERSION,bGuidanceContext,bSelectionContext,bProviderMessages,completeBGuidance,containsBDelegation} from '../supabase/functions/experiment-api/b-guidance.mjs';
 import {recipeOutcome,RECIPE_RULE_VERSION} from '../supabase/functions/experiment-api/game-plans.mjs';
 import {browser,fixture,enterGame,settle} from './helpers.mjs';
 import {createGameCapabilities} from '../supabase/functions/experiment-api/game-chat.mjs';
@@ -40,10 +40,10 @@ test('B API and the actual feeding record retain guidance provenance without exp
 test('the deployed adapter attaches reliable knowledge only to B and preserves A verified recipes',async()=>{
  const source=fs.readFileSync(new URL('../supabase/functions/experiment-api/index.ts',import.meta.url),'utf8');
  const body=source.match(/async gameAI\(input: any\) \{([\s\S]+?)\n  \},\n  async ai/)[1].replace('providerMessages: any[]','providerMessages');
- const keys=['aiEnabled','ApiError','Deno','fetch','B_GUIDANCE_POLICY','B_GUIDANCE_VERSION','bGuidanceContext','bSelectionContext','completeBGuidance',...Object.keys(plans)];
+ const keys=['aiEnabled','ApiError','Deno','fetch','B_GUIDANCE_POLICY','B_GUIDANCE_VERSION','bGuidanceContext','bSelectionContext','bProviderMessages','completeBGuidance',...Object.keys(plans)];
  const calls=[];const transport=async(url,options)=>{calls.push(JSON.parse(options.body));return new Response(JSON.stringify({model:'fixture',choices:[{finish_reason:'stop',message:{content:JSON.stringify({text:'蓝铃叶与珊瑚枝有搭配作用。'})}}]}));};
- const adapter=Function(...keys,'return async function(input){'+body+'}')(...[true,ApiError,{env:{get:k=>k==='DEEPSEEK_API_KEY'?'fixture-key':null}},transport,B_GUIDANCE_POLICY,B_GUIDANCE_VERSION,bGuidanceContext,bSelectionContext,completeBGuidance,...Object.values(plans)]);
+ const adapter=Function(...keys,'return async function(input){'+body+'}')(...[true,ApiError,{env:{get:k=>k==='DEEPSEEK_API_KEY'?'fixture-key':null}},transport,B_GUIDANCE_POLICY,B_GUIDANCE_VERSION,bGuidanceContext,bSelectionContext,bProviderMessages,completeBGuidance,...Object.values(plans)]);
  const input={round:1,difficulty:'advanced',recipe:[0,0,0,0,0],history:[],messages:[{role:'user',content:'请给我一份成功喂养的食谱。'}]};
- const b=await adapter({...input,mode:'augmentation',selection:{version:'b-selection-context-v1',selected:[false,false,false,false,false]}});assert.equal(b.guidance_version,B_GUIDANCE_VERSION);assert.match(calls[0].messages[0].content,/canonical_rule_function/);assert.ok(calls[0].messages[0].content.includes('"recipe":[null,null,null,null,null]'));assert.ok(calls[0].messages[0].content.includes('"status":"not_started"'));assert.doesNotMatch(calls[0].messages[0].content,/recommended_recipe|verified_plans/);
- const a=await adapter({...input,mode:'delegation'});assert.equal(a.recipe.length,5);assert.equal(recipeOutcome(a.recipe,'advanced'),a.expected_delta);assert.equal(a.guidance_version,undefined);assert.doesNotMatch(calls[1].messages[0].content,/teaching_support|canonical_rule_function|学习辅助方式/);assert.equal(calls.length,2);
+ const b=await adapter({...input,mode:'augmentation',selection:{version:'b-selection-context-v1',selected:[false,false,false,false,false]}});assert.equal(b.guidance_version,B_GUIDANCE_VERSION);const facts=calls[0].messages.at(-2);assert.equal(facts.role,'system');assert.match(facts.content,/已执行历史，明确名称对应份数/);assert.match(facts.content,/状态=not_started/);assert.match(facts.content,/蓝铃叶=未明确选择/);assert.doesNotMatch(facts.content,/recommended_recipe|verified_plans/);
+ const a=await adapter({...input,mode:'delegation'});assert.equal(a.recipe.length,5);assert.equal(recipeOutcome(a.recipe,'advanced'),a.expected_delta);assert.equal(a.guidance_version,undefined);assert.doesNotMatch(calls[1].messages[0].content,/teaching_support|canonical_rule_function|学习辅助方式/);assert.equal(calls.length,2);assert.equal(calls[0].thinking.type,'enabled');assert.equal(calls[0].reasoning_effort,'high');assert.equal(calls[0].max_tokens,8192);assert.equal(calls[1].thinking.type,'disabled');assert.equal(calls[1].max_tokens,1200);
 });
