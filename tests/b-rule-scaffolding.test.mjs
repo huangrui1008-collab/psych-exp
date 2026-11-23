@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import * as plans from '../supabase/functions/experiment-api/game-plans.mjs';
 import {ApiError} from '../supabase/functions/experiment-api/handler.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';
-import {B_GUIDANCE_POLICY,B_GUIDANCE_VERSION,bGuidanceContext,completeBGuidance,containsBDelegation} from '../supabase/functions/experiment-api/b-guidance.mjs';
+import {B_GUIDANCE_POLICY,B_GUIDANCE_VERSION,bGuidanceContext,bSelectionContext,completeBGuidance,containsBDelegation} from '../supabase/functions/experiment-api/b-guidance.mjs';
 import {recipeOutcome,RECIPE_RULE_VERSION} from '../supabase/functions/experiment-api/game-plans.mjs';
 import {browser,fixture,enterGame,settle} from './helpers.mjs';
 import {createGameCapabilities} from '../supabase/functions/experiment-api/game-chat.mjs';
@@ -25,7 +25,7 @@ test('specific numerical explanations stay allowed while complete recipes and ob
 
 test('one correction retains permission for numerical teaching and never falls back to canned or number-free replies',async()=>{
  const requests=[];const messages=[{role:'system',content:B_GUIDANCE_POLICY},{role:'user',content:'为什么这轮减少？'}];const response=await completeBGuidance(messages,async m=>{requests.push(m);return {result:{text:requests.length===1?'下一轮其他不变，把蓝铃叶改成3份。':'你这轮蓝铃叶为6份、珊瑚枝为4份，符合已核对的减量条件。'},model:'fixture'};});
- assert.equal(requests.length,2);assert.match(requests[1][0].content,/保留.*局部数值/);assert.doesNotMatch(requests[1][0].content,/完全不要写数字/);assert.match(response.result.text,/6份/);assert.equal(messages[0].content,B_GUIDANCE_POLICY);
+ assert.equal(requests.length,2);assert.match(requests[1][0].content,/保留.*局部数值/);assert.match(requests[1][0].content,/当前暂选和历史食谱/);assert.doesNotMatch(requests[1][0].content,/完全不要写数字/);assert.match(response.result.text,/6份/);assert.equal(messages[0].content,B_GUIDANCE_POLICY);
  let attempts=0;await assert.rejects(completeBGuidance(messages,async()=>{attempts++;return {result:{text:'完整配方：[2,4,3,1,2]'}};}),e=>e.status===502);assert.equal(attempts,2);
 });
 
@@ -40,10 +40,10 @@ test('B API and the actual feeding record retain guidance provenance without exp
 test('the deployed adapter attaches reliable knowledge only to B and preserves A verified recipes',async()=>{
  const source=fs.readFileSync(new URL('../supabase/functions/experiment-api/index.ts',import.meta.url),'utf8');
  const body=source.match(/async gameAI\(input: any\) \{([\s\S]+?)\n  \},\n  async ai/)[1].replace('providerMessages: any[]','providerMessages');
- const keys=['aiEnabled','ApiError','Deno','fetch','B_GUIDANCE_POLICY','B_GUIDANCE_VERSION','bGuidanceContext','completeBGuidance',...Object.keys(plans)];
+ const keys=['aiEnabled','ApiError','Deno','fetch','B_GUIDANCE_POLICY','B_GUIDANCE_VERSION','bGuidanceContext','bSelectionContext','completeBGuidance',...Object.keys(plans)];
  const calls=[];const transport=async(url,options)=>{calls.push(JSON.parse(options.body));return new Response(JSON.stringify({model:'fixture',choices:[{finish_reason:'stop',message:{content:JSON.stringify({text:'蓝铃叶与珊瑚枝有搭配作用。'})}}]}));};
- const adapter=Function(...keys,'return async function(input){'+body+'}')(...[true,ApiError,{env:{get:k=>k==='DEEPSEEK_API_KEY'?'fixture-key':null}},transport,B_GUIDANCE_POLICY,B_GUIDANCE_VERSION,bGuidanceContext,completeBGuidance,...Object.values(plans)]);
+ const adapter=Function(...keys,'return async function(input){'+body+'}')(...[true,ApiError,{env:{get:k=>k==='DEEPSEEK_API_KEY'?'fixture-key':null}},transport,B_GUIDANCE_POLICY,B_GUIDANCE_VERSION,bGuidanceContext,bSelectionContext,completeBGuidance,...Object.values(plans)]);
  const input={round:1,difficulty:'advanced',recipe:[0,0,0,0,0],history:[],messages:[{role:'user',content:'请给我一份成功喂养的食谱。'}]};
- const b=await adapter({...input,mode:'augmentation'});assert.equal(b.guidance_version,B_GUIDANCE_VERSION);assert.match(calls[0].messages[0].content,/canonical_rule_function/);assert.doesNotMatch(calls[0].messages[0].content,/recommended_recipe|verified_plans/);
+ const b=await adapter({...input,mode:'augmentation',selection:{version:'b-selection-context-v1',selected:[false,false,false,false,false]}});assert.equal(b.guidance_version,B_GUIDANCE_VERSION);assert.match(calls[0].messages[0].content,/canonical_rule_function/);assert.ok(calls[0].messages[0].content.includes('"recipe":[null,null,null,null,null]'));assert.ok(calls[0].messages[0].content.includes('"status":"not_started"'));assert.doesNotMatch(calls[0].messages[0].content,/recommended_recipe|verified_plans/);
  const a=await adapter({...input,mode:'delegation'});assert.equal(a.recipe.length,5);assert.equal(recipeOutcome(a.recipe,'advanced'),a.expected_delta);assert.equal(a.guidance_version,undefined);assert.doesNotMatch(calls[1].messages[0].content,/teaching_support|canonical_rule_function|学习辅助方式/);assert.equal(calls.length,2);
 });
