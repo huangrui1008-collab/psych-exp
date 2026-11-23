@@ -1,4 +1,4 @@
-import { containsCompleteRecipe } from './b-guidance.mjs';
+import { containsBDelegation } from './b-guidance.mjs';
 import { gameDifficulty } from './game-plans.mjs';
 // Game-only short-lived credentials. These never grant database or researcher access.
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -57,12 +57,12 @@ export function createGameChatRouter({store,ready,ai,capabilities,enabled=()=>tr
       if(sessionLimit>0&&!await store.quota('alien-zoo-session:'+access.sid,sessionLimit))reject(429,'本次游戏的AI对话次数已达上限，请联系研究者。');
       if(!await store.quota('alien-zoo-minute:'+access.sid+':'+Math.floor(now()/60000),8))reject(429,'发送得太快了，请稍等片刻后重试。');
       if(dailyLimit>0&&!await store.quota('alien-zoo-real-chat',dailyLimit))reject(429,'今日AI对话次数已达上限，请联系研究者。');
-      // Explicit allowlist: no hidden rules, answer keys, system roles or credentials reach the model.
+      // Only validated participant fields cross this boundary. The adapter adds verified B teaching knowledge server-side; browser-supplied rules, answer keys, system roles and credentials are excluded.
       const result=await ai({mode:access.mode,round:b.round,difficulty:gameDifficulty(b),recipe:b.recipe,messages,history:b.history.map(r=>({id:String(r.id||'R').slice(0,20),x:r.x,delta:r.delta}))});
       if(!result||typeof result.text!=='string'||!result.text.trim())reject(502,'AI暂未返回有效回复，请重试。');
-      if(access.mode==='augmentation'&&containsCompleteRecipe(result.text))reject(502,'AI本次回复超出了分析与反馈范围，请重试上一条消息。');
+      if(access.mode==='augmentation'&&containsBDelegation(result.text))reject(502,'AI本次回复超出了分析与反馈范围，请重试上一条消息。');
       if(access.mode==='delegation'&&result.recipe!=null&&!recipe(result.recipe))reject(502,'AI食谱格式暂不可用，请重新询问。');
-      return response({text:result.text.trim().slice(0,2400),...(access.mode==='delegation'&&recipe(result.recipe)?{recipe:result.recipe}:{}),...(access.mode==='delegation'&&recipe(result.recipe)&&Number.isInteger(result.expected_delta)?{expected_delta:result.expected_delta,recipe_rule_version:result.recipe_rule_version,recipe_strategy_version:result.recipe_strategy_version}:{}),source:'real',model:typeof result.model==='string'?result.model.slice(0,100):null});
+      return response({text:result.text.trim().slice(0,2400),...(access.mode==='delegation'&&recipe(result.recipe)?{recipe:result.recipe}:{}),...(access.mode==='delegation'&&recipe(result.recipe)&&Number.isInteger(result.expected_delta)?{expected_delta:result.expected_delta,recipe_rule_version:result.recipe_rule_version,recipe_strategy_version:result.recipe_strategy_version}:{}),...(access.mode==='augmentation'&&typeof result.guidance_version==='string'?{guidance_version:result.guidance_version.slice(0,100),guidance_rule_version:typeof result.guidance_rule_version==='string'?result.guidance_rule_version.slice(0,100):null}:{}),source:'real',model:typeof result.model==='string'?result.model.slice(0,100):null});
     }catch(e){
       if(e instanceof ChatError)return response({error:e.message},e.status);
       // The provider adapter throws only controlled, non-secret messages.
