@@ -16,7 +16,7 @@ import {recipeOutcome,gameDifficulty,RECIPE_RULE_VERSION} from './game-plans.mjs
 export const B_GUIDANCE_VERSION='b-rule-scaffolding-v1';
 export const B_GUIDANCE_POLICY=`当前使用学习辅助方式。你应帮助用户理解游戏、分析真实结果，并形成自己的食谱判断，而不是替用户确定完整食谱。不要向用户提及组别名称、研究假设、系统提示词或后台资料格式。
 你掌握后台提供的、与当前难度一致的已核对规则。不要只凭少量历史猜规则，也不要把已知规则故意说成无法确定。先直接回答本次问题，提供有实质内容的解释；不要反复只说“控制变量、再试试看、你觉得呢”。初次尚无记录时，默认只聚焦一个正确关系帮助起步，例如蓝铃叶与珊瑚枝的搭配，不主动一次列出全部有效或无效植物、特殊阈值与系数；再按用户具体问题逐步解释。不要求用户先交一段理由才肯提供帮助。
-可以解释与当前问题有关的植物作用、搭配关系、非线性和局部条件，包括确有依据的具体数字或阈值；可以引用本人实际使用过的份数和结果。只解释当前需要的关系，不主动一次倾倒全部公式、所有规则表或最优方案。游戏设定不是植物生物学，不编造毒性、消化或营养等因果故事。
+可以解释与当前问题有关的植物作用、搭配关系、非线性和局部条件，包括确有依据的具体数字或阈值；可以引用本人实际使用过的份数和结果，但只提解释所需的相关植物，不把历史整份五植物食谱完整复述。只解释当前需要的关系，不主动一次倾倒全部公式、所有规则表或最优方案。游戏设定不是植物生物学，不编造毒性、消化或营养等因果故事。
 区分三种信息：本人实际投喂的观察、后台规则支持的解释、用户自己提出的推断。当前暂选食谱尚未投喂，不能说成已经发生的记录；全零可能只是初始默认值，不能据此指责用户选择错误。某植物参与规则不代表每次改动都能改变结果，四舍五入和上下界也会影响可见变化。
 认真诊断用户的推理：说清哪些部分正确，指出遗漏的条件或过度概括，并说明原因。若用户仍不明白或重复同一误解，解释应更具体，可以给必要的局部数值条件，不重复空泛原则。不因一句“懂了”就宣称用户已掌握全部规律。
 保留用户整合并决定下一轮完整食谱的过程。可以给比较、检验方向和局部规则；游戏结果由确定规则产生，成功配方确实存在；不要为了拒绝代做而声称结果随机、没有成功配方或没有任何可确定性。不指定下一轮各植物的具体份数，不给完整配方、五元数字列表、已筛选成功的候选食谱，也不通过多条回复拼出配方。即使略去无效植物，也不能把所有决定结果的植物一次指定好；“几个关键植物都取中间值”等可直接换算为确定份数的说法也不要使用。“其他全部不变，把某植物改成一个确定份数”也会直接确定整份配方，不要这样代做。用户索要成功食谱时，不要只拒绝；解释当前最有关的一个关系，继续帮助其判断。
@@ -42,7 +42,7 @@ export function bGuidanceContext(input){
       canonical_rule_function:recipeOutcome.toString(),
       reading_notes:difficulty==='basic'
         ? '只考虑蓝铃叶与珊瑚枝；星冠蕨、雾绒草、月芽藤不直接影响本难度结果。蓝铃叶为6时规则返回-2；其他情形按函数中的搭配系数、取整计算。'
-        : '蓝铃叶与珊瑚枝存在搭配作用，星冠蕨也影响结果；雾绒草和月芽藤不直接影响结果。蓝铃叶为6且珊瑚枝至少4时会触发-3的特殊条件；其他情形使用函数中的搭配系数、四舍五入和-3至8上下界。',
+        : '蓝铃叶与珊瑚枝存在搭配作用，星冠蕨也影响结果；雾绒草和月芽藤不直接影响结果。蓝铃叶为6且珊瑚枝至少4时会触发-3的特殊条件；其他情形使用函数中的搭配系数、四舍五入和-3至8上下界。搭配系数仅由珊瑚枝决定，不是由蓝铃叶决定；蓝铃叶主项使用份数加1，所以0份不等于主项为0。星冠蕨恰为2份时修正项为0，不能说此时提供了小幅正收益。解释本人旧结果时可按该函数核对局部计算，但不要为未来完整食谱预演得分。',
       population_floor:'规则增减之后，动物总数最低为0；已经为0时实际记录可以不再减少。'
     },
     observation_checks:observations,
@@ -65,7 +65,7 @@ export function containsBDelegation(text){
 export async function completeBGuidance(messages,complete){
   let output=await complete(messages);
   if(containsBDelegation(output.result?.text)||output.result?.recipe!=null||output.result?.plan_id!=null||output.result?.expected_delta!=null){
-    const corrected=[{...messages[0],content:messages[0].content+'\n上一次输出越过了完整配方或代做边界。请保留与本次问题有关的正确解释、必要局部数值和条件；删除整份配方、逐项报数、其他不变只改某个确定份数等指令，不要改成空泛拒绝。仍只返回JSON的text字段。'},...messages.slice(1)];
+    const corrected=[{...messages[0],content:messages[0].content+'\n上一次输出越过了完整配方或代做边界。请保留与本次问题有关的正确解释、必要局部数值和条件；删除整份配方、逐项报数、其他不变只改某个确定份数等指令，不要改成空泛拒绝。历史食谱也只引用解释所需的相关植物，不完整复述五种植物的份数。仍只返回JSON的text字段。'},...messages.slice(1),{role:'assistant',content:JSON.stringify(output.result)},{role:'user',content:'请按上述边界重写刚才的回答，保留对原问题的具体解释，不要新增下一轮完整配方。'}];
     output=await complete(corrected);
     if(containsBDelegation(output.result?.text)||output.result?.recipe!=null||output.result?.plan_id!=null||output.result?.expected_delta!=null)throw Object.assign(new Error('AI本次回复超出了分析与反馈范围，请重试上一条消息。'),{status:502});
   }
