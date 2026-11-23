@@ -19,7 +19,7 @@ const ANIMAL_MOTION_MS=1800;
 let animalMotion=null,animalObserver=null,animalTimer=null,animalFrame=null;
 const RECIPE_DISPLAY_MS=1500;
 let recipeDisplayTimer=null,restartError='';
-const mobileChatMedia=window.matchMedia?.('(max-width: 720px)');
+const mobileChatMedia=window.matchMedia?.('(max-width: 720px) and (hover: none) and (pointer: coarse)');
 const chatSheet={open:false,scrollX:0,scrollY:0,logTop:null,focusReturn:null,bodyStyles:null,inertNodes:[]};
 const assignedMode=resolveAssignment();
 document.getElementById('gameConnection').hidden=!isManaging;
@@ -130,7 +130,7 @@ function assistantPanel(includeRoundControls=true){
  const messages=s.chatHistory||[];
  return `<div class="chat-log" role="log" aria-label="AI对话记录" aria-live="polite">${messages.length?messages.map(m=>`<article class="chat-message ${m.role==='user'?'chat-user':'chat-assistant'}"><div class="chat-meta"><b>${m.role==='user'?'你':'AI助手'}</b><span>第${m.round}轮${m.role==='assistant'?' · 真实AI':''}</span></div><p class="chat-text">${esc(m.content)}</p>${s.mode==='delegation'&&m.recipe?foodCards(m.recipe,false):''}${m.role==='assistant'&&m.recipe&&s.mode==='delegation'&&m.round===s.rounds.length+1?`<button class="secondary" data-do="adopt" data-message-id="${esc(m.id)}" ${pending?'disabled':''}>一键填入食谱</button>`:''}${m.status==='failed'?'<small class="error">这条消息未获得AI回复。</small>':''}</article>`).join(''):''}${pending?'<div class="chat-waiting" role="status"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span> AI正在回复…</div>':''}</div><div class="chat-error" role="alert">${s.chatError?esc(s.chatError)+' <button class="ghost" data-do="retry-chat">重试上一条</button>':''}</div><form id="chatForm" class="chat-composer">${s.mode==='delegation'?`<div class="chat-shortcuts"><span class="muted">快捷提问</span><button type="button" class="secondary" data-do="fill-recipe-prompt" ${pending?'disabled':''}>请给我提供一份成功喂养的食谱。</button></div>`:''}<label class="sr-only" for="chatInput">向AI发送消息</label><textarea id="chatInput" rows="3" maxlength="2000" placeholder="输入你想问AI的问题…" ${pending?'disabled':''}>${esc(s.chatDraft||'')}</textarea><div class="row between"><small>Enter发送 · Shift+Enter换行</small><button type="submit" ${pending?'disabled':''}>${pending?'回复中…':'发送'}</button></div></form>${includeRoundControls?roundAIControls():''}`;
 }
-function roundAIControls(){return `${canChooseSelfDecision()&&!hasRoundReply()?`<div class="self-decide-option"><button type="button" class="ghost" data-do="self-decide" ${pending||selfDeciding()?'disabled':''}>${selfDeciding()?'本轮自行决定（已选择）':'本轮自行决定，不咨询AI'}</button></div>`:''}${hasRoundReply()?`<label class="row chat-ack"><input type="checkbox" id="aiAck" ${s.aiAcknowledged?'checked':''}> 我已查看本轮AI回复</label>`:''}`;}
+function roundAIControls(){return `${canChooseSelfDecision()&&!hasRoundReply()?`<div class="self-decide-option"><button type="button" class="ghost" data-do="self-decide" ${pending||selfDeciding()?'disabled':''}>${selfDeciding()?'本轮自行决定（已选择）':'本轮自行决定，不咨询AI'}</button></div>`:''}${hasRoundReply()?`<label class="row chat-ack"><input type="checkbox" id="aiAck" ${s.aiAcknowledged?'checked':''}><span>我已查看本轮AI回复</span></label>`:''}`;}
 function mobileChat(){return ['delegation','augmentation'].includes(s?.mode)&&s.stage==='play'&&!!mobileChatMedia?.matches}
 function releaseChatInert(){for(const [node,wasInert]of chatSheet.inertNodes)if(!wasInert)node.removeAttribute('inert');chatSheet.inertNodes=[];}
 function lockChatBackground(){
@@ -150,7 +150,7 @@ function updateChatViewport(){
 function syncChatLayout(){
  const surface=document.getElementById('aiChatSheet'),opener=app.querySelector('[data-do="open-ai-sheet"]');if(!surface)return;
  if(!mobileChat()&&chatSheet.open)closeChatSheet(false);
- const mobile=mobileChat();surface.hidden=mobile&&!chatSheet.open;
+ const mobile=mobileChat();surface.closest('.chat-sheet-card').classList.toggle('mobile-chat-layout',mobile);surface.hidden=mobile&&!chatSheet.open;
  const close=surface.querySelector('[data-do="close-ai-sheet"]');if(close)close.hidden=!mobile;
  if(mobile){surface.setAttribute('role','dialog');surface.setAttribute('aria-labelledby','aiSheetTitle');}else{surface.removeAttribute('role');surface.removeAttribute('aria-labelledby');}
  if(chatSheet.open){surface.setAttribute('aria-modal','true');lockChatBackground();updateChatViewport();const log=surface.querySelector('.chat-log');if(log)log.scrollTop=chatSheet.logTop??log.scrollHeight;surface.querySelector('[data-do="close-ai-sheet"]')?.focus({preventScroll:true});}else surface.removeAttribute('aria-modal');

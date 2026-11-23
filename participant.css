@@ -40,7 +40,9 @@ main{max-width:1000px;margin:30px auto 36px}
 .chat-composer textarea:focus{outline:2px solid #83ae95;outline-offset:2px}
 .chat-composer .row{margin-top:11px}
 .chat-composer button{min-width:96px}
-.chat-ack{margin-top:15px;padding-top:14px;border-top:1px solid #e5ece4;font-size:14px}
+.chat-ack{display:flex;justify-content:center;align-items:center;flex-wrap:nowrap;gap:12px;width:100%;min-height:80px;margin:14px 0 0;padding:18px 12px;border-top:1px solid #d6e2d9;font-size:20px;font-weight:650;line-height:1.5;text-align:center;cursor:pointer}
+.chat-ack input[type=checkbox]{width:28px;height:28px;flex:none;margin:0;accent-color:#256b57;cursor:pointer}
+.chat-ack span{min-width:0}
 .chat-error:empty{display:none}
 .chat-error{color:#a32e23;font-size:14px;background:#fff4ef;padding:10px 12px;border-radius:8px;margin:8px 0;line-height:1.7}
 .chat-error button{margin:5px 0 0 8px;padding:6px 10px;font-size:13px}
@@ -74,30 +76,27 @@ main{max-width:1000px;margin:30px auto 36px}
 
 .self-decide-option{margin-top:12px}.self-decide-option button{border:0;background:transparent;border-radius:4px;font-size:14px;font-weight:400;min-height:44px;padding:8px 0;text-align:left;text-decoration:underline;text-underline-offset:3px}.self-decide-option button:disabled{opacity:1;color:#65766c;text-decoration:none}
 
-/* One shared chat surface: inline on wide screens, a bottom sheet on narrow screens. */
+/* One shared chat surface. JS applies this mode only on narrow, touch-primary screens. */
 .chat-sheet-open,.chat-sheet-heading,.chat-sheet-backdrop,.chat-round-status{display:none}
-@media(max-width:720px){
- .chat-sheet-open{display:inline-flex;align-items:center;justify-content:center;min-height:46px;margin-top:5px;padding:11px 20px;font-size:16px}
- .chat-round-status{display:block;min-height:3.3em;margin:10px 0 0;font-size:14px;line-height:1.65}
- .chat-round-controls{min-height:60px;display:flow-root}
- .chat-sheet-backdrop{display:block;position:fixed;inset:0;background:rgba(15,35,28,.38);z-index:50;touch-action:none}
- .chat-sheet-surface{position:fixed;left:0;right:0;bottom:var(--chat-sheet-bottom,0px);z-index:51;display:flex;flex-direction:column;height:min(82dvh,720px);max-height:var(--chat-sheet-max-height,calc(100dvh - 12px));min-height:140px;background:#fff;border:1px solid #d5e2d9;border-bottom:0;border-radius:20px 20px 0 0;box-shadow:0 -10px 38px rgba(23,53,40,.15);overflow:hidden;overscroll-behavior:contain;padding-bottom:env(safe-area-inset-bottom,0px)}
- .chat-sheet-heading{display:flex;flex:none;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;border-bottom:1px solid #e3eae4}
- .chat-sheet-heading h3{font-size:18px;margin:0}
- .chat-sheet-heading button{min-height:44px;min-width:64px;font-size:15px}
- .chat-sheet-body{display:flex;flex-direction:column;flex:1;min-height:0;padding:0 16px 12px}
- .chat-sheet-body .chat-log{flex:1;min-height:0;max-height:none;padding-top:6px;scroll-behavior:auto;-webkit-overflow-scrolling:touch}
- .chat-sheet-body .chat-message{max-width:96%;font-size:16px;padding:12px 14px;margin:10px 0}
- .chat-sheet-body .chat-meta{font-size:14px}
- .chat-sheet-body .chat-meta span{font-size:13px}
- .chat-sheet-body .chat-composer{flex:none;margin-top:0;padding-top:10px}
- .chat-sheet-body .chat-composer textarea{min-height:72px;max-height:110px;resize:none;font-size:16px;padding:10px 12px}
- .chat-sheet-body .chat-composer .row{margin-top:8px}
- .chat-sheet-body .chat-composer button{min-height:44px;font-size:16px}
- .chat-sheet-body .chat-error{flex:none;max-height:96px;overflow:auto;font-size:14px}
- .chat-round-controls .chat-ack{font-size:15px;line-height:1.65}
- .chat-round-controls .self-decide-option button{font-size:15px}
-}
+.mobile-chat-layout .chat-sheet-open{display:inline-flex;align-items:center;justify-content:center;min-height:46px;margin-top:5px;padding:11px 20px;font-size:16px}
+.mobile-chat-layout .chat-round-status{display:block;min-height:3.3em;margin:10px 0 0;font-size:14px;line-height:1.65}
+.mobile-chat-layout .chat-round-controls{min-height:96px;display:flow-root}
+.mobile-chat-layout .chat-sheet-backdrop{display:block;position:fixed;inset:0;background:rgba(15,35,28,.38);z-index:50;touch-action:none}
+.mobile-chat-layout .chat-sheet-surface{position:fixed;left:0;right:0;bottom:var(--chat-sheet-bottom,0px);z-index:51;display:flex;flex-direction:column;height:min(82dvh,720px);max-height:var(--chat-sheet-max-height,calc(100dvh - 12px));min-height:140px;background:#fff;border:1px solid #d5e2d9;border-bottom:0;border-radius:20px 20px 0 0;box-shadow:0 -10px 38px rgba(23,53,40,.15);overflow:hidden;overscroll-behavior:contain;padding-bottom:env(safe-area-inset-bottom,0px)}
+.mobile-chat-layout .chat-sheet-heading{display:flex;flex:none;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;border-bottom:1px solid #e3eae4}
+.mobile-chat-layout .chat-sheet-heading h3{font-size:18px;margin:0}
+.mobile-chat-layout .chat-sheet-heading button{min-height:44px;min-width:64px;font-size:15px}
+.mobile-chat-layout .chat-sheet-body{display:flex;flex-direction:column;flex:1;min-height:0;padding:0 16px 12px}
+.mobile-chat-layout .chat-sheet-body .chat-log{flex:1;min-height:0;max-height:none;padding-top:6px;scroll-behavior:auto;-webkit-overflow-scrolling:touch}
+.mobile-chat-layout .chat-sheet-body .chat-message{max-width:96%;font-size:16px;padding:12px 14px;margin:10px 0}
+.mobile-chat-layout .chat-sheet-body .chat-meta{font-size:14px}
+.mobile-chat-layout .chat-sheet-body .chat-meta span{font-size:13px}
+.mobile-chat-layout .chat-sheet-body .chat-composer{flex:none;margin-top:0;padding-top:10px}
+.mobile-chat-layout .chat-sheet-body .chat-composer textarea{min-height:72px;max-height:110px;resize:none;font-size:16px;padding:10px 12px}
+.mobile-chat-layout .chat-sheet-body .chat-composer .row{margin-top:8px}
+.mobile-chat-layout .chat-sheet-body .chat-composer button{min-height:44px;font-size:16px}
+.mobile-chat-layout .chat-sheet-body .chat-error{flex:none;max-height:96px;overflow:auto;font-size:14px}
+.mobile-chat-layout .chat-round-controls .self-decide-option button{font-size:15px}
 
 .chat-recipe-status{font-size:14px;color:#256b57;font-weight:400;white-space:nowrap}
 
