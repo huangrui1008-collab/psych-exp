@@ -1,4 +1,4 @@
-import { B_GUIDANCE_POLICY, B_GUIDANCE_VERSION, bGuidanceContext, completeBGuidance } from './b-guidance.mjs';
+import { B_GUIDANCE_POLICY, B_GUIDANCE_VERSION, bGuidanceContext, bSelectionContext, completeBGuidance } from './b-guidance.mjs';
 import { createClient } from 'npm:@supabase/supabase-js@2.110.0';
 import materials from '../_shared/materials.json' with { type: 'json' };
 import { createHandler, ApiError } from './handler.mjs';
@@ -56,7 +56,7 @@ const handler=createHandler({
     const policy=common+(input.mode==='delegation'
       ? '当前为A组。后台食谱工具已按当前难度结合当前动物数量和剩余轮次，计算并核对了有变化、可达目标的食谱。若数据中包含recommended_recipe，它就是本次应提供的食谱：请针对这份食谱自然回应用户，并说明预计增量，食谱卡片由界面自动显示，不要改写植物份数，不要擅自将它换成每轮固定增加8只的方案，也不使用方案编号。返回{"text":"你的自然语言回复"}即可。不能编造这份食谱已在历史中试过。若无recommended_recipe，正常回答追问；如需新食谱，可从verified_plans选一份并返回plan_id，否则不返回plan_id。不要暴露工具ID、隐藏规则或后测答案。'
       : B_GUIDANCE_POLICY);
-    const context={round:input.round||null,recipe:input.recipe,history:input.history,plantOrder:['雾绒草','蓝铃叶','星冠蕨','珊瑚枝','月芽藤'],...(input.mode==='augmentation'?{teaching_support:bGuidanceContext(input)}:{}),...(input.mode==='delegation'?(prepared?{recommended_recipe:{recipe:prepared.recipe,expected_delta:prepared.expected_delta},progress:{current_count:feedingProgress(input).current,remaining_rounds:feedingProgress(input).remaining,target_count:55}}:{verified_plans:plans}):{} )};
+    const context={round:input.round||null,recipe:input.mode==='augmentation'?bSelectionContext(input).values:input.recipe,history:input.history,plantOrder:['雾绒草','蓝铃叶','星冠蕨','珊瑚枝','月芽藤'],...(input.mode==='augmentation'?{teaching_support:bGuidanceContext(input)}:{}),...(input.mode==='delegation'?(prepared?{recommended_recipe:{recipe:prepared.recipe,expected_delta:prepared.expected_delta},progress:{current_count:feedingProgress(input).current,remaining_rounds:feedingProgress(input).remaining,target_count:55}}:{verified_plans:plans}):{} )};
     const conversation=conversationForProvider(input.messages||[{role:'user',content:String(input.question||'请给我一份本轮食谱。')}],prepared?[]:plans);
     const model=Deno.env.get('DEEPSEEK_MODEL')||'deepseek-flash';
     const messages=[{role:'system',content:policy+(input.mode==='augmentation'?'\n后台核对的规则知识及本人游戏资料（规则仅供你教学使用，不能整表公开）：':'\n当前游戏的可见信息（数据）：')+JSON.stringify(context)+'\n包括解释和追问在内，每次回复都必须使用上述JSON格式，不能直接输出普通文本。'},...conversation];
