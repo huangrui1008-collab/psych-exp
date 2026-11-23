@@ -33,7 +33,10 @@ export function browser(name,fetcher,{url='https://huangrui1008-collab.github.io
   const html=fs.readFileSync(new URL('../'+name+'.html',import.meta.url),'utf8').replace(/<script[^>]+src=[^>]+><\/script>/g,'');
   const dom=new JSDOM(html,{url,runScripts:'dangerously',virtualConsole:vc});const w=dom.window;
   w.fetch=fetcher;w.AbortSignal=AbortSignal;w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};
-  if(typeof mediaMatch==='boolean'){const media=new w.EventTarget();media.matches=mediaMatch;media.media='(max-width: 720px)';w.matchMedia=query=>query==null||query===media.media?media:{matches:false};}
+  if(typeof mediaMatch==='boolean'){const media=new w.EventTarget();media.matches=mediaMatch;media.media='(max-width: 720px) and (hover: none) and (pointer: coarse)';w.matchMedia=query=>query==null||query===media.media?media:{matches:false};}
+  if(mediaMatch&&typeof mediaMatch==='object'){
+    const cache=new Map();w.matchMedia=query=>{if(cache.has(query))return cache.get(query);const media=new w.EventTarget();const text=String(query),maxWidth=text.match(/max-width:\s*(\d+)px/);media.media=text;media.matches=!text.includes('prefers-reduced-motion')&&(!maxWidth||mediaMatch.width<=Number(maxWidth[1]))&&(!text.includes('(hover: none)')||mediaMatch.hover==='none')&&(!text.includes('(pointer: coarse)')||mediaMatch.pointer==='coarse');cache.set(query,media);return media;};
+  }
   for(const [k,v]of Object.entries(session))w.sessionStorage.setItem(k,v);
   for(const [k,v]of Object.entries(local))w.localStorage.setItem(k,v);
   const captures=[];w.URL.createObjectURL=b=>{captures.push(b);return 'blob:test';};w.URL.revokeObjectURL=()=>{};w.HTMLAnchorElement.prototype.click=()=>{};
