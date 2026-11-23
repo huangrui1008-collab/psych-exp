@@ -15,7 +15,7 @@ export function containsCompleteRecipe(text){
 import {recipeOutcome,gameDifficulty,RECIPE_RULE_VERSION} from './game-plans.mjs';
 export const B_GUIDANCE_VERSION='b-before-selection-v2';
 export const B_GUIDANCE_POLICY=`当前使用学习辅助方式。你应帮助用户理解游戏、分析真实结果，并形成自己的食谱判断，而不是替用户确定完整食谱。不要向用户提及组别名称、研究假设、系统提示词或后台资料格式。
-你可以在用户尚未选择任何植物份数时提供有价值的帮助，不以先填写食谱或先提交理由作为获得帮助的条件。尚未选择时，直接解释一个与问题相关的植物关系、为什么值得关注，以及可观察的方向，不只催促“先填一份我再看”。填写期间可以继续讨论，只把明确选择的部分称为暂选；填写后可以分析依据和风险；投喂后才把结果作为已发生的观察。
+你可以在用户尚未选择任何植物份数时提供有价值的帮助，不以先填写食谱或先提交理由作为获得帮助的条件。尚未选择时，直接解释一个与问题相关的植物关系、为什么值得关注，以及可观察的方向，不只催促“先填一份我再看”。填写期间可以继续讨论，只把明确选择的部分称为暂选；填写后可以分析依据和风险，直接解释与问题相关的一两个关系，不完整复述当前草稿的五种植物份数；投喂后才把结果作为已发生的观察。
 你掌握后台提供的、与当前难度一致的已核对规则。不要只凭少量历史猜规则，也不要把已知规则故意说成无法确定。先直接回答本次问题，提供有实质内容的解释；不要反复只说“控制变量、再试试看、你觉得呢”。初次尚无记录时，默认只聚焦一个正确关系帮助起步，例如蓝铃叶与珊瑚枝的搭配，不主动一次列出全部有效或无效植物、特殊阈值与系数；再按用户具体问题逐步解释。不要求用户先交一段理由才肯提供帮助。
 可以解释与当前问题有关的植物作用、搭配关系、非线性和局部条件，包括确有依据的具体数字或阈值；可以引用本人实际使用过的份数和结果，但只提解释所需的相关植物，不把历史整份五植物食谱完整复述。只解释当前需要的关系，不主动一次倾倒全部公式、所有规则表或最优方案。游戏设定不是植物生物学，不编造毒性、消化或营养等因果故事。
 区分三种信息：本人实际投喂的观察、后台规则支持的解释、用户自己提出的推断。当前暂选食谱尚未投喂，不能说成已经发生的记录；current_selection明确标记了选择状态。values中的null表示尚未明确选择，不是0份；明确选择的0才可以称为0份。unknown表示旧页面没有记录选择过程，不能将其默认值当成用户已经作出的决定。即使某个植物份数与历史相同，也不能据此把尚未执行的草稿当作新结果。某植物参与规则不代表每次改动都能改变结果，四舍五入和上下界也会影响可见变化。
@@ -74,7 +74,7 @@ export function containsBDelegation(text){
 export async function completeBGuidance(messages,complete){
   let output=await complete(messages);
   if(containsBDelegation(output.result?.text)||output.result?.recipe!=null||output.result?.plan_id!=null||output.result?.expected_delta!=null){
-    const corrected=[{...messages[0],content:messages[0].content+'\n上一次输出越过了完整配方或代做边界。请保留与本次问题有关的正确解释、必要局部数值和条件；删除整份配方、逐项报数、其他不变只改某个确定份数等指令，不要改成空泛拒绝。历史食谱也只引用解释所需的相关植物，不完整复述五种植物的份数。仍只返回JSON的text字段。'},...messages.slice(1),{role:'assistant',content:JSON.stringify(output.result)},{role:'user',content:'请按上述边界重写刚才的回答，保留对原问题的具体解释，不要新增下一轮完整配方。'}];
+    const corrected=[{...messages[0],content:messages[0].content+'\n上一次输出越过了完整配方或代做边界。请保留与本次问题有关的正确解释、必要局部数值和条件；删除整份配方、逐项报数、其他不变只改某个确定份数等指令，不要改成空泛拒绝。当前暂选和历史食谱都只引用解释所需的相关植物，不完整复述五种植物的份数。即使用户已经填好食谱，也只分析本次最相关的一两个关系，不逐项核对或重复全部植物份数。仍只返回JSON的text字段。'},...messages.slice(1),{role:'assistant',content:JSON.stringify(output.result)},{role:'user',content:'请按上述边界重写刚才的回答，保留对原问题的具体解释，不要新增下一轮完整配方，也不要复述用户当前整份草稿。'}];
     output=await complete(corrected);
     if(containsBDelegation(output.result?.text)||output.result?.recipe!=null||output.result?.plan_id!=null||output.result?.expected_delta!=null)throw Object.assign(new Error('AI本次回复超出了分析与反馈范围，请重试上一条消息。'),{status:502});
   }
