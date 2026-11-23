@@ -1,4 +1,4 @@
-import { B_GUIDANCE_POLICY, B_GUIDANCE_VERSION, bGuidanceContext, bSelectionContext, completeBGuidance } from './b-guidance.mjs';
+import { B_GUIDANCE_POLICY, B_GUIDANCE_VERSION, bGuidanceContext, bSelectionContext, bProviderMessages, completeBGuidance } from './b-guidance.mjs';
 import { createClient } from 'npm:@supabase/supabase-js@2.110.0';
 import materials from '../_shared/materials.json' with { type: 'json' };
 import { createHandler, ApiError } from './handler.mjs';
@@ -59,12 +59,12 @@ const handler=createHandler({
     const context={round:input.round||null,recipe:input.mode==='augmentation'?bSelectionContext(input).values:input.recipe,history:input.history,plantOrder:['雾绒草','蓝铃叶','星冠蕨','珊瑚枝','月芽藤'],...(input.mode==='augmentation'?{teaching_support:bGuidanceContext(input)}:{}),...(input.mode==='delegation'?(prepared?{recommended_recipe:{recipe:prepared.recipe,expected_delta:prepared.expected_delta},progress:{current_count:feedingProgress(input).current,remaining_rounds:feedingProgress(input).remaining,target_count:55}}:{verified_plans:plans}):{} )};
     const conversation=conversationForProvider(input.messages||[{role:'user',content:String(input.question||'请给我一份本轮食谱。')}],prepared?[]:plans);
     const model=Deno.env.get('DEEPSEEK_MODEL')||'deepseek-flash';
-    const messages=[{role:'system',content:policy+(input.mode==='augmentation'?'\n后台核对的规则知识及本人游戏资料（规则仅供你教学使用，不能整表公开）：':'\n当前游戏的可见信息（数据）：')+JSON.stringify(context)+'\n包括解释和追问在内，每次回复都必须使用上述JSON格式，不能直接输出普通文本。'},...conversation];
+    const messages=input.mode==='augmentation'?bProviderMessages(input,common,conversation,context.teaching_support):[{role:'system',content:policy+(input.mode==='augmentation'?'\n后台核对的规则知识及本人游戏资料（规则仅供你教学使用，不能整表公开）：':'\n当前游戏的可见信息（数据）：')+JSON.stringify(context)+'\n包括解释和追问在内，每次回复都必须使用上述JSON格式，不能直接输出普通文本。'},...conversation];
     const complete=async(providerMessages: any[])=>{
     const r=await fetch('https://api.deepseek.com/chat/completions',{
-      method:'POST',signal:AbortSignal.timeout(input.mode==='augmentation'?20000:45000),
+      method:'POST',signal:AbortSignal.timeout(input.mode==='augmentation'?25000:45000),
       headers:{'Content-Type':'application/json',Authorization:'Bearer '+(Deno.env.get('DEEPSEEK_API_KEY')||'').trim()},
-      body:JSON.stringify({model,thinking:{type:'disabled'},temperature:0.2,max_tokens:1200,response_format:{type:'json_object'},messages:providerMessages})
+      body:JSON.stringify({model,...(input.mode==='augmentation'?{thinking:{type:'enabled'},reasoning_effort:'high',max_tokens:8192}:{thinking:{type:'disabled'},temperature:0.2,max_tokens:1200}),response_format:{type:'json_object'},messages:providerMessages})
     });
     if(!r.ok){
       console.error('Alien Zoo provider status',r.status);
